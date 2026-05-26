@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload CV | AI Career Advisor</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="upload">
+  <nav class="nav page-nav">
+    <div class="brand">AI Career Advisor</div>
+    <div class="nav-links">
+      <a href="index.html" data-i18n="nav.home">Home</a>
+      <a href="upload.html" data-i18n="nav.upload">Upload CV</a>
+      <a href="results.html" data-i18n="nav.results">Results</a>
+      <a href="auth.html" data-i18n="nav.account">Account</a>
+    </div>
+    <div class="nav-actions">
+      <a id="nav-auth-link" class="button secondary nav-action-button" href="auth.html" data-i18n="nav.login">Login</a>
+      <button id="nav-logout-button" type="button" class="button secondary nav-action-button" data-i18n="nav.logout" hidden>Logout</button>
+    </div>
+    <div class="lang-switch" role="group" aria-label="Language selector">
+      <button type="button" class="lang-button" data-lang="en">English</button>
+      <button type="button" class="lang-button" data-lang="mn">Монгол</button>
+    </div>
+  </nav>
+
+  <main class="page-section">
+    <section class="upload-shell">
+      <div class="upload-header">
+        <p class="eyebrow" data-i18n="upload.eyebrow">Career Intake</p>
+        <h1 data-i18n="upload.title">Upload and review your CV before analysis</h1>
+        <p class="subtitle" data-i18n="upload.subtitle">Add a PDF or paste CV text, review the extracted content in the preview panel, then send it for AI analysis.</p>
+      </div>
+
+      <div class="builder-grid">
+        <aside class="panel builder-sidebar">
+          <div class="builder-sidebar-header">
+            <p class="eyebrow" data-i18n="upload.sidebarEyebrow">CV Builder</p>
+            <h2 data-i18n="upload.sidebarTitle">Resume sections</h2>
+          </div>
+          <div class="builder-step-list">
+            <div class="builder-step-item">
+              <span class="builder-step-index">01</span>
+              <div>
+                <strong data-i18n="upload.sidebarStep1Title">Personal profile</strong>
+                <p data-i18n="upload.sidebarStep1Copy">Add your name, target role, and experience level.</p>
+              </div>
+            </div>
+            <div class="builder-step-item">
+              <span class="builder-step-index">02</span>
+              <div>
+                <strong data-i18n="upload.sidebarStep2Title">Source document</strong>
+                <p data-i18n="upload.sidebarStep2Copy">Upload a file or paste the latest CV content.</p>
+              </div>
+            </div>
+            <div class="builder-step-item">
+              <span class="builder-step-index">03</span>
+              <div>
+                <strong data-i18n="upload.sidebarStep3Title">Career direction</strong>
+                <p data-i18n="upload.sidebarStep3Copy">Describe the role, industry, and growth goal you want next.</p>
+              </div>
+            </div>
+            <div class="builder-step-item">
+              <span class="builder-step-index">04</span>
+              <div>
+                <strong data-i18n="upload.sidebarStep4Title">AI review</strong>
+                <p data-i18n="upload.sidebarStep4Copy">Generate a stronger CV draft and role-specific feedback.</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <section class="panel upload-panel">
+          <div class="builder-banner">
+            <span class="builder-badge" data-i18n="upload.builderBadge">Structured builder</span>
+            <h2 data-i18n="upload.builderTitle">Build a recruiter-ready CV profile</h2>
+            <p data-i18n="upload.builderCopy">This workspace is organized like a professional CV builder so your information is cleaner before AI analysis begins.</p>
+            <p class="builder-auth-hint" data-i18n="upload.historyHint">Sign in to automatically save each analysis to your CV history.</p>
+          </div>
+
+          <form id="cv-form" class="form-grid">
+            <section class="builder-section full-width">
+              <div class="builder-section-head">
+                <p class="builder-section-step">01</p>
+                <div>
+                  <h3 data-i18n="upload.sectionPersonalTitle">Personal profile</h3>
+                  <p data-i18n="upload.sectionPersonalCopy">Start with the core details a recruiter expects to see first.</p>
+                </div>
+              </div>
+              <div class="builder-fields builder-fields-three">
+                <label data-i18n-label="upload.fullName">
+                  Full name
+                  <input type="text" name="fullName" placeholder="Jane Doe" data-i18n-placeholder="upload.fullNamePlaceholder" required>
+                </label>
+
+                <label data-i18n-label="upload.targetRole">
+                  Target role
+                  <input type="text" name="targetRole" placeholder="Frontend Developer" data-i18n-placeholder="upload.targetRolePlaceholder" required>
+                </label>
+
+                <label data-i18n-label="upload.experienceYears">
+                  Years of experience
+                  <input type="number" name="experienceYears" placeholder="3" data-i18n-placeholder="upload.experienceYearsPlaceholder" min="0" required>
+                </label>
+              </div>
+            </section>
+
+            <section class="builder-section full-width">
+              <div class="builder-section-head">
+                <p class="builder-section-step">02</p>
+                <div>
+                  <h3 data-i18n="upload.sectionSourceTitle">CV source</h3>
+                  <p data-i18n="upload.sectionSourceCopy">Import your latest file or paste the full CV text for a cleaner AI review.</p>
+                </div>
+              </div>
+              <label id="upload-dropzone" class="upload-dropzone" data-upload-state="idle">
+                <span class="upload-dropzone-mark" aria-hidden="true"></span>
+                <span class="upload-dropzone-title" data-i18n="upload.uploadTitle">Upload CV file</span>
+                <span class="upload-dropzone-copy" data-i18n="upload.uploadCopy">Drag and drop a PDF or TXT file here, or click to browse.</span>
+                <span class="upload-file-meta" data-i18n="upload.fileMeta">Accepted formats: PDF, TXT. Maximum size: 5MB.</span>
+                <input id="cv-file" type="file" name="cvFile" accept=".pdf,.txt,text/plain,application/pdf">
+                <span id="file-name" class="upload-file-name" data-i18n="upload.noFile">No file selected</span>
+              </label>
+            </section>
+
+            <section class="builder-section full-width">
+              <div class="builder-section-head">
+                <p class="builder-section-step">03</p>
+                <div>
+                  <h3 data-i18n="upload.sectionGoalsTitle">Career direction</h3>
+                  <p data-i18n="upload.sectionGoalsCopy">Clarify what kind of next role you want so the advice feels tailored, not generic.</p>
+                </div>
+              </div>
+              <label class="full-width" data-i18n-label="upload.careerGoals">
+                Career goals
+                <textarea name="careerGoals" rows="5" placeholder="I want to transition into a product-focused engineering role..." data-i18n-placeholder="upload.careerGoalsPlaceholder" required></textarea>
+              </label>
+            </section>
+
+            <section class="builder-section full-width">
+              <div class="builder-section-head">
+                <p class="builder-section-step">04</p>
+                <div>
+                  <h3 data-i18n="upload.sectionContentTitle">CV content</h3>
+                  <p data-i18n="upload.sectionContentCopy">Paste the latest version here if you want full control over what the AI reads.</p>
+                </div>
+              </div>
+              <label class="full-width" data-i18n-label="upload.cvText">
+                Or paste CV text
+                <textarea id="cv-text" name="cvText" rows="12" placeholder="Paste resume text here if you do not want to upload a file." data-i18n-placeholder="upload.cvTextPlaceholder"></textarea>
+              </label>
+            </section>
+
+            <div class="builder-actions full-width">
+              <button id="analyze-button" type="submit" class="button primary" data-i18n="upload.analyze">Analyze CV</button>
+            </div>
+          </form>
+
+          <p id="form-status" class="status-text"></p>
+        </section>
+
+        <aside class="panel preview-panel">
+          <div class="preview-header">
+            <span class="builder-badge" data-i18n="upload.previewBadge">Live preview</span>
+            <h2 data-i18n="upload.previewTitle">Text Preview</h2>
+            <p data-i18n="upload.previewCopy">Preview pasted text or supported text-file content before sending it to the API.</p>
+          </div>
+          <div id="preview-placeholder" class="preview-placeholder" data-i18n="upload.previewPlaceholder">Your CV preview will appear here.</div>
+          <pre id="cv-preview" class="cv-preview" hidden></pre>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

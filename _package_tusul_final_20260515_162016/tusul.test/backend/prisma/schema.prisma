@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String         @id @default(uuid())
+  fullName          String
+  email             String         @unique
+  passwordHash      String
+  preferredLanguage String         @default("mn")
+  createdAt         DateTime       @default(now())
+  sessions          Session[]
+  cvSubmissions     CvSubmission[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  tokenId   String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model CvSubmission {
+  id             String          @id @default(uuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName       String
+  fileType       String
+  status         String          @default("uploaded")
+  rawText        String?
+  jobDescription String?
+  overall        Int             @default(0)
+  uploadedAt     DateTime        @default(now())
+  analysis       AnalysisResult?
+}
+
+model AnalysisResult {
+  id                  String              @id @default(uuid())
+  cvId                String              @unique
+  cv                  CvSubmission        @relation(fields: [cvId], references: [id], onDelete: Cascade)
+  scores              Json
+  summary             String
+  strengths           Json
+  weaknesses          Json
+  keywordsMissing     Json
+  keywordsRecommended Json
+  interview           Json
+  career              Json
+  createdAt           DateTime            @default(now())
+  suggestions         RewriteSuggestion[]
+}
+
+model RewriteSuggestion {
+  id          String         @id @default(uuid())
+  analysisId  String
+  analysis    AnalysisResult @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  type        String
+  severity    String
+  original    String
+  suggestion  String
+  explanation String
+  status      String         @default("pending")
+  createdAt   DateTime       @default(now())
+}

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Results | AI Career Advisor</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="results">
+  <nav class="nav page-nav">
+    <div class="brand">AI Career Advisor</div>
+    <div class="nav-links">
+      <a href="index.html" data-i18n="nav.home">Home</a>
+      <a href="upload.html" data-i18n="nav.upload">Upload CV</a>
+      <a href="results.html" data-i18n="nav.results">Results</a>
+      <a href="auth.html" data-i18n="nav.account">Account</a>
+    </div>
+    <div class="nav-actions">
+      <a id="nav-auth-link" class="button secondary nav-action-button" href="auth.html" data-i18n="nav.login">Login</a>
+      <button id="nav-logout-button" type="button" class="button secondary nav-action-button" data-i18n="nav.logout" hidden>Logout</button>
+    </div>
+    <div class="lang-switch" role="group" aria-label="Language selector">
+      <button type="button" class="lang-button" data-lang="en">English</button>
+      <button type="button" class="lang-button" data-lang="mn">Монгол</button>
+    </div>
+  </nav>
+
+  <main class="page-section">
+    <section class="panel">
+      <p class="eyebrow" data-i18n="results.eyebrow">Analysis Output</p>
+      <h1 data-i18n="results.title">Your career guidance results</h1>
+      <p class="subtitle" data-i18n="results.subtitle">This page shows either sample data or the most recent backend response, including a rewritten CV draft.</p>
+      <div class="results-toolbar">
+        <button id="download-cv-button" type="button" class="button primary" data-i18n="results.downloadCv">Download CV</button>
+        <button id="refresh-history-button" type="button" class="button secondary" data-i18n="results.refreshHistory">Refresh History</button>
+      </div>
+      <p id="results-status" class="status-text"></p>
+      <div id="results-container" class="results-grid"></div>
+    </section>
+
+    <section class="panel history-panel">
+      <div class="history-panel-head">
+        <div>
+          <p class="eyebrow" data-i18n="history.eyebrow">Saved History</p>
+          <h2 data-i18n="history.title">Your previous CV analyses</h2>
+          <p class="subtitle" data-i18n="history.subtitle">Sign in to keep a timeline of AI career reviews and improved CV versions.</p>
+        </div>
+      </div>
+      <div id="history-empty" class="history-empty" data-i18n="history.loginPrompt">Sign in to save and review your previous CV analyses.</div>
+      <div id="history-list" class="history-list"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
