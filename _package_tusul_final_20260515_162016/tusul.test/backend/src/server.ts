@@ -361,10 +361,10 @@ function buildInterviewPrep(
   if (language === 'mn') {
     return {
       technical: [
-        `Асуулт: ${role} чиглэлд ${topSkills} ур чадвараа ашигласан нэг төслөө тайлбарлана уу.\nХариултын санаа: Төслийн зорилго, таны үүрэг, ашигласан хэрэгсэл, гарсан үр дүнг STAR бүтэцтэй хэл. Боломжтой бол тоон үр дүн нэм.`,
+        `Асуулт: ${role} чиглэлд ${topSkills} ур чадвараа ашигласан нэг төслөө тайлбарлана уу.\nХариултын санаа: Төслийн зорилго, таны үүрэг, ашигласан хэрэгсэл, гарсан үр дүнг нөхцөл байдал, даалгавар, хийсэн үйлдэл, үр дүнгийн бүтэцтэй хэл. Боломжтой бол тоон үр дүн нэм.`,
         `Асуулт: ${skillGap}-ийг богино хугацаанд нөхөхийн тулд ямар төлөвлөгөө гаргах вэ?\nХариултын санаа: Сурах эх сурвалж, хэрэгжүүлэх жижиг төсөл, хэмжих үзүүлэлтээ тодорхой хэл.`,
         `Асуулт: CV дээрх хамгийн хүчтэй ажлын туршлагаа ${role}-ийн шаардлагатай яаж холбох вэ?\nХариултын санаа: Ажил олгогчийн хэрэгцээ, өөрийн хийсэн үйлдэл, бизнест өгсөн үнэ цэнийг холбо.`,
-        `Асуулт: ${topSkills} ашиглах үед гарсан хүндрэл, trade-off-оо тайлбарлана уу.\nХариултын санаа: Сонгосон шийдэл, яагаад сонгосон шалтгаан, дараа нь юу сайжруулах байснаа хэл.`,
+        `Асуулт: ${topSkills} ашиглах үед гарсан хүндрэл, шийдвэрийн сонголтоо тайлбарлана уу.\nХариултын санаа: Сонгосон шийдэл, яагаад сонгосон шалтгаан, дараа нь юу сайжруулах байснаа хэл.`,
       ],
       hr: [
         `Асуулт: Яагаад ${role} чиглэлд ажиллахыг хүсэж байна вэ?\nХариултын санаа: Карьерын зорилго, одоогийн ур чадвар, тухайн байгууллагад өгөх үнэ цэнээ товч холбо.`,
@@ -372,14 +372,14 @@ function buildInterviewPrep(
         `Асуулт: ${improvement}-ийг та хэрхэн сайжруулж байгаа вэ?\nХариултын санаа: Сул талаа хүлээн зөвшөөрөөд, аль хэдийн эхлүүлсэн тодорхой алхмаа хэл.`,
       ],
       behavioral: [
-        `Асуулт: Deadline шахуу үед ажлаа хэрхэн эрэмбэлж байсан бэ?\nХариултын санаа: Нөхцөл байдал, сонгосон priority, бусадтай яаж ойлголцсон, эцсийн үр дүнг хэл.`,
+        `Асуулт: Эцсийн хугацаа шахуу үед ажлаа хэрхэн эрэмбэлж байсан бэ?\nХариултын санаа: Нөхцөл байдал, сонгосон эрэмбэ, бусадтай яаж ойлголцсон, эцсийн үр дүнг хэл.`,
         `Асуулт: Санал зөрөлдсөн багийн нөхцөл байдлыг яаж шийдсэн бэ?\nХариултын санаа: Нөгөө талын байр суурийг ойлгосон байдал, баримтаар ярьсан арга, тохиролцсон шийдлээ дурд.`,
         `Асуулт: Шинэ зүйл хурдан сурах шаардлагатай үед ямар арга хэрэглэдэг вэ?\nХариултын санаа: Сурах эх сурвалж, дадлага хийх арга, сурсан зүйлээ ажил дээр ашигласан жишээ хэл.`,
       ],
       suggestedAnswers: [
-        'STAR бүтэц ашигла: Situation, Task, Action, Result. Хариулт бүр 60-90 секунд байхад тохиромжтой.',
+        'Нөхцөл байдал, даалгавар, хийсэн үйлдэл, үр дүнгийн бүтэц ашигла. Хариулт бүр 60-90 секунд байхад тохиромжтой.',
         'Технологи, шийдвэрийн шалтгаан, хэмжигдэхүйц үр дүн гэсэн гурвыг боломжтой үед заавал оруул.',
-        'Монгол хэлээр ярьж байгаа бол Latin-р бичсэн монгол үгээ Кириллээр цэгцтэй хэл. Харин технологи, компанийн нэр, certificate зэрэг жинхэнэ English нэршлийг хэвээр үлдээ.',
+        'Монгол хэлээр ярьж байгаа бол латин үсгээр бичсэн монгол үгээ кириллээр цэгцтэй хэл. Харин технологи, компанийн нэр, сертификат зэрэг албан ёсны гадаад нэршлийг хэвээр үлдээ.',
         'CV дээр байхгүй ажил, компани, огноо, сертификат зохиож хэлэхгүй. Баримт дутуу бол сурах төлөвлөгөө болон бодит хийсэн ажлаараа нөх.',
       ],
     };
@@ -637,7 +637,7 @@ function buildSimulatedAnalysis(request: ReturnType<typeof normalizeRequest>, cv
         ],
     rewrittenCv: finalizeRewrittenCv('', request, cvText, skills, '', experienceLevel),
     summary: request.language === 'mn'
-      ? `${nameFromCv} нь ${request.targetRole} чиглэлд ${experienceLevel.toLowerCase()} түвшний нэр дэвшигч бөгөөд upload хийсэн CV-ээс ${skills.length} гол ур чадвар илэрлээ.`
+      ? `${nameFromCv} нь ${request.targetRole} чиглэлд ${experienceLevel.toLowerCase()} түвшний нэр дэвшигч бөгөөд оруулсан CV-ээс ${skills.length} гол ур чадвар илэрлээ.`
       : `${nameFromCv} appears to be a ${experienceLevel.toLowerCase()} candidate for ${request.targetRole} with ${skills.length} identifiable skill areas from the uploaded CV.`,
     interview: buildInterviewPrep({
       targetRole: request.targetRole,
@@ -810,8 +810,9 @@ async function analyzeCvPayload(req: Request) {
     targetRole: result.targetRole || request.targetRole,
   };
 
+  const persistAnalysis = String(req.body.persist ?? 'true') !== 'false';
   const user = getAuthUser(req);
-  if (user) {
+  if (user && persistAnalysis) {
     const db = readDb();
     const dashboard = toDashboardAnalysis(result);
     const overall = Math.round(dashboard.scores.reduce((sum, score) => sum + score.value, 0) / dashboard.scores.length);
@@ -874,10 +875,10 @@ function packageClientPayload(
 function buildStoredSuggestions(result: CareerAnalysis, language: 'mn' | 'en' = 'mn'): StoredSuggestion[] {
   const severities = ['high', 'medium', 'low', 'low'];
   const fallbackOriginal =
-    language === 'mn' ? 'CV хэсэг сайжруулах шаардлагатай' : 'CV section needs improvement';
+    language === 'mn' ? 'CV-ийн энэ хэсгийг сайжруулах шаардлагатай' : 'CV section needs improvement';
   const fallbackExplanation =
     language === 'mn'
-      ? 'ATS болон recruiter уншигдах байдлыг сайжруулна.'
+      ? 'ATS болон ажил олгогчид уншихад илүү ойлгомжтой болгоно.'
       : 'Improves ATS alignment and recruiter readability.';
   return result.cvImprovementSuggestions.slice(0, 6).map((suggestion, index) => ({
     id: randomUUID(),
@@ -910,7 +911,7 @@ function buildAnalysisRecord(item: HistoryItem) {
   const dashboard = toDashboardAnalysis(item.result);
   const suggestions =
     item.suggestions ??
-    buildStoredSuggestions(item.result);
+    buildStoredSuggestions(item.result, item.request.language);
 
   return {
     id: item.id,
@@ -923,6 +924,7 @@ function buildAnalysisRecord(item: HistoryItem) {
       item.overall ??
       Math.round(dashboard.scores.reduce((sum, score) => sum + score.value, 0) / dashboard.scores.length),
     analysis: {
+      language: item.request.language,
       candidateName: item.result.candidateName,
       targetRole: item.request.targetRole,
       scores: dashboard.scores,
@@ -952,12 +954,40 @@ function findSuggestionForUser(db: Database, suggestionId: string, userId: strin
 }
 
 function toDashboardAnalysis(result: CareerAnalysis) {
+  const language = result.metadata?.language === 'en' ? 'en' : 'mn';
+  const copy = language === 'mn'
+    ? {
+        atsLabel: 'ATS оноо',
+        atsExplanation: 'Бүтэц, түлхүүр үг, хэмжигдэхүйц үр дүнд тулгуурласан ATS бэлэн байдал.',
+        readabilityLabel: 'Уншигдах байдал',
+        skillsLabel: 'Ур чадварын тохирол',
+        skillsExplanation: 'Зорилтот ажлын байрны ур чадвартай нийцэх байдлын ойролцоо үнэлгээ.',
+        experienceLabel: 'Туршлага',
+        grammarLabel: 'Хэл найруулга',
+        grammarExplanation: 'Мэргэжлийн өнгө аяс болон бичгийн алдааны суурь шалгалт.',
+        fallbackOriginal: 'CV-ийн энэ хэсгийг сайжруулах шаардлагатай',
+        feedbackExplanation: 'ATS болон ажил олгогчид уншихад илүү ойлгомжтой болгоно.',
+        estimatedDuration: '3-6 сар',
+      }
+    : {
+        atsLabel: 'ATS score',
+        atsExplanation: 'ATS readiness based on structure, keywords, and measurable impact.',
+        readabilityLabel: 'Readability',
+        skillsLabel: 'Skill match',
+        skillsExplanation: 'Estimated fit for the target role skills.',
+        experienceLabel: 'Experience',
+        grammarLabel: 'Grammar',
+        grammarExplanation: 'Professional tone and grammar check baseline.',
+        fallbackOriginal: 'CV section needs improvement',
+        feedbackExplanation: 'Improves ATS alignment and recruiter readability.',
+        estimatedDuration: '3-6 months',
+      };
   const scores = [
-    {key: 'atsScore', label: 'ATS score', value: result.atsScore, explanation: 'ATS readiness based on structure, keywords, and measurable impact.', confidence: 0.9},
-    {key: 'readability', label: 'Readability', value: Math.min(100, result.atsScore + 3), explanation: result.summary, confidence: 0.86},
-    {key: 'skillsMatch', label: 'Skill match', value: Math.max(35, result.atsScore - result.missingSkills.length * 3), explanation: 'Estimated fit for the target role skills.', confidence: 0.84},
-    {key: 'experience', label: 'Experience', value: result.experienceLevel.toLowerCase().includes('senior') ? 88 : result.experienceLevel.toLowerCase().includes('mid') ? 80 : 70, explanation: result.experienceLevel, confidence: 0.82},
-    {key: 'grammar', label: 'Grammar', value: 90, explanation: 'Professional tone and grammar check baseline.', confidence: 0.8},
+    {key: 'atsScore', label: copy.atsLabel, value: result.atsScore, explanation: copy.atsExplanation, confidence: 0.9},
+    {key: 'readability', label: copy.readabilityLabel, value: Math.min(100, result.atsScore + 3), explanation: result.summary, confidence: 0.86},
+    {key: 'skillsMatch', label: copy.skillsLabel, value: Math.max(35, result.atsScore - result.missingSkills.length * 3), explanation: copy.skillsExplanation, confidence: 0.84},
+    {key: 'experience', label: copy.experienceLabel, value: result.experienceLevel.toLowerCase().includes('senior') ? 88 : result.experienceLevel.toLowerCase().includes('mid') ? 80 : 70, explanation: result.experienceLevel, confidence: 0.82},
+    {key: 'grammar', label: copy.grammarLabel, value: 90, explanation: copy.grammarExplanation, confidence: 0.8},
   ];
 
   return {
@@ -976,9 +1006,9 @@ function toDashboardAnalysis(result: CareerAnalysis) {
       id: `fb_${index + 1}`,
       type: 'cv_improvement',
       severity: index === 0 ? 'high' : 'medium',
-      original: result.weakPoints[index] || 'CV section needs improvement',
+      original: result.weakPoints[index] || copy.fallbackOriginal,
       suggestion,
-      explanation: 'Improves ATS alignment and recruiter readability.',
+      explanation: copy.feedbackExplanation,
       accepted: false,
     })),
     interview: result.interview,
@@ -987,7 +1017,7 @@ function toDashboardAnalysis(result: CareerAnalysis) {
       recommendedRoles: result.careerRecommendations.slice(0, 3),
       missingSkills: result.missingSkills,
       roadmap: result.cvImprovementSuggestions,
-      estimatedDuration: '3-6 months',
+      estimatedDuration: copy.estimatedDuration,
     },
   };
 }
@@ -1130,7 +1160,7 @@ app.post('/api/career/suggestions/:id/regenerate', (req, res) => {
   if (!match.suggestion) throw new ApiError('NOT_FOUND', 'Suggestion not found.', 404);
   const extra =
     match.item?.request.language === 'mn'
-      ? ' Мөн үр дүнг тоон үзүүлэлтээр тодруулж, target role-ийн keyword-үүдтэй уялдуулах боломжтой.'
+      ? ' Мөн үр дүнг тоон үзүүлэлтээр тодруулж, зорилтот ажлын байрны түлхүүр үгстэй уялдуулах боломжтой.'
       : ' Also quantify results and align with target role keywords.';
   match.suggestion.suggestion += extra;
   match.suggestion.status = 'pending';

@@ -5,18 +5,24 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Brand palette */
+  --color-brand-bg:   #F1EDEE;
+  --color-brand-dark: #333E5B;
+  --color-brand-mid:  #495883;
+  --color-brand-teal: #009FB7;
 }
 
 @layer base {
   :root {
-    --bg: #ffffff;
-    --fg: #0f172a;
-    --primary: #4f46e5; /* indigo-600 */
-    --secondary: #64748b;
-    --muted: #f1f5f9;
-    --accent: #6366f1;
-    --card-bg: rgba(255, 255, 255, 0.5);
-    --border: #e2e8f0;
+    --bg: #F1EDEE;
+    --fg: #333E5B;
+    --primary: #333E5B;
+    --secondary: #495883;
+    --muted: #F1EDEE;
+    --accent: #495883;
+    --card-bg: rgba(255, 255, 255, 0.6);
+    --border: #ddd8da;
   }
 
   .dark {

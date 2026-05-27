@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {MutableRefObject, ReactNode} from 'react';
-import {t, tArr, langStorage} from './i18n';
+import {t, tf, langStorage} from './i18n';
 import type {Language} from './i18n';
 import {
   AlertTriangle,
@@ -24,13 +24,11 @@ import {
   Languages,
   LayoutDashboard,
   Loader2,
-  LockKeyhole,
   LogIn,
   LogOut,
   MessageSquareText,
   RefreshCw,
   Settings,
-  ShieldCheck,
   Sparkles,
   Target,
   UploadCloud,
@@ -42,7 +40,10 @@ import {
 import type {LucideIcon} from 'lucide-react';
 import {CvExportImprovements} from './components/CvExportImprovements';
 import {CvPreviewModal} from './components/CvPreviewModal';
+import {DashboardView} from './components/DashboardView';
 import {ExportPdfPreview} from './components/ExportPdfPreview';
+import {WorkflowStepper} from './components/WorkflowStepper';
+import type {WorkflowStepDef} from './components/WorkflowStepper';
 import {resolveCandidateName} from '@shared/cvSections';
 
 type CvStatus = 'uploaded' | 'parsing' | 'analyzing' | 'completed' | 'failed';
@@ -84,6 +85,7 @@ type CvRecord = {
 };
 
 type AnalysisResult = {
+  language: Language;
   candidateName: string;
   targetRole: string;
   rewrittenCv: string;
@@ -152,7 +154,18 @@ const navigation: Array<{id: ActiveView; labelKey: Parameters<typeof t>[0]; icon
   {id: 'history',   labelKey: 'navHistory',   icon: History},
 ];
 
+// The 6 linear workflow steps shown as a floating stepper overlay
+const workflowSteps: WorkflowStepDef[] = [
+  {id: 'upload',    labelKey: 'navUpload',    icon: UploadCloud},
+  {id: 'analysis',  labelKey: 'navAnalysis',  icon: BarChart3},
+  {id: 'rewrite',   labelKey: 'navRewrite',   icon: Sparkles},
+  {id: 'interview', labelKey: 'navInterview', icon: MessageSquareText},
+  {id: 'career',    labelKey: 'navCareer',    icon: Target},
+  {id: 'export',    labelKey: 'navExport',    icon: Download},
+];
+
 const defaultAnalysis: AnalysisResult = {
+  language: 'mn',
   candidateName: '',
   targetRole: '',
   rewrittenCv: '',
@@ -186,6 +199,14 @@ function getStatusText(status: CvStatus, lang: Language) {
   return t(map[status], lang);
 }
 
+function getLanguageToggleLabel(lang: Language) {
+  const labelKey: Record<Language, Parameters<typeof t>[0]> = {
+    mn: 'switchToEnglish',
+    en: 'switchToMongolian',
+  };
+  return t(labelKey[lang], lang);
+}
+
 function severityClass(severity: Severity) {
   if (severity === 'high') return 'border-rose-300 bg-rose-50 text-rose-700';
   if (severity === 'medium') return 'border-amber-300 bg-amber-50 text-amber-700';
@@ -201,17 +222,18 @@ function isGenericFeedbackExplanation(text: string) {
   const t = text.trim().toLowerCase();
   return (
     t === 'improves ats alignment and recruiter readability.' ||
-    t === 'ats болон recruiter уншигдах байдлыг сайжруулна.'
+    t === 'ats болон recruiter уншигдах байдлыг сайжруулна.' ||
+    t === 'ats болон ажил олгогчид уншихад илүү ойлгомжтой болгоно.'
   );
 }
 
 function severityLabel(severity: Severity, lang: Language) {
-  const labels: Record<Severity, {mn: string; en: string}> = {
-    high: {mn: 'Өндөр', en: 'High'},
-    medium: {mn: 'Дунд', en: 'Medium'},
-    low: {mn: 'Бага', en: 'Low'},
+  const labels: Record<Severity, Parameters<typeof t>[0]> = {
+    high: 'levelHigh',
+    medium: 'levelMedium',
+    low: 'levelLow',
   };
-  return labels[severity][lang];
+  return t(labels[severity], lang);
 }
 
 function buildFileType(file: File): 'pdf' | null {
@@ -224,6 +246,12 @@ function buildFileType(file: File): 'pdf' | null {
 function normalizeApiAnalysis(payload: any, lang: Language): AnalysisResult | null {
   if (!payload) return null;
   const data = payload.data || payload;
+  const responseLanguage: Language =
+    data.metadata?.language === 'en' || data.language === 'en'
+      ? 'en'
+      : data.metadata?.language === 'mn' || data.language === 'mn'
+        ? 'mn'
+        : lang;
 
   const scores: Metric[] = Array.isArray(data.scores) ? data.scores : [];
   const feedback: Feedback[] = [];
@@ -261,9 +289,9 @@ function normalizeApiAnalysis(payload: any, lang: Language): AnalysisResult | nu
         id: `fb_${i}`,
         type: 'cv_improvement',
         severity: severities[i] || 'low',
-        original: weakPoints[i] || (lang === 'mn' ? 'CV хэсэг сайжруулах шаардлагатай' : 'CV section needs improvement'),
+        original: weakPoints[i] || t('fallbackFeedbackOriginal', lang),
         suggestion: sug,
-        explanation: lang === 'mn' ? 'ATS болон recruiter уншигдах байдлыг сайжруулна.' : 'Improves ATS alignment and recruiter readability.',
+        explanation: t('fallbackFeedbackExplanation', lang),
         status: 'pending',
       });
     });
@@ -274,7 +302,7 @@ function normalizeApiAnalysis(payload: any, lang: Language): AnalysisResult | nu
     recommendedRoles: data.careerRecommendations || [],
     missingSkills: data.missingSkills || [],
     roadmap: (data.careerRecommendations || []).map((r: string, i: number) => `${i + 1}. ${r}`),
-    estimatedDuration: lang === 'mn' ? '3-6 сар' : '3-6 months',
+    estimatedDuration: t('fallbackCareerDuration', lang),
   };
 
   const interview = data.interview || {
@@ -286,6 +314,7 @@ function normalizeApiAnalysis(payload: any, lang: Language): AnalysisResult | nu
 
   const cvTextForName = String(data.sourceCvText || payload.sourceCvText || data.rewrittenCv || '');
   return {
+    language: responseLanguage,
     candidateName: resolveCandidateName({
       candidateName: data.candidateName || data.fullName || '',
       cvText: cvTextForName,
@@ -405,6 +434,7 @@ function normalizeDbAnalysis(
     cvId: record.id,
     analysis: {
       candidateName: resolvedName,
+      language: a.language === 'en' || record.language === 'en' ? 'en' : 'mn',
       targetRole: a.targetRole || record.jobDescription || '',
       rewrittenCv: a.rewrittenCv || record.rewrittenCv || '',
       sourceCvText: a.sourceCvText || record.sourceCvText || '',
@@ -573,6 +603,63 @@ export default function App() {
     window.setTimeout(() => setToast(''), 2600);
   };
 
+  const refreshAnalysisForLanguage = async (nextLang: Language) => {
+    const hasAnalysisContent = Boolean(
+      analysis.summary.trim() || analysis.rewrittenCv.trim() || analysis.feedback.length,
+    );
+    const cvText = String(analysis.sourceCvText || rawText).trim();
+    if (!token || !user || !hasAnalysisContent || !cvText || analysis.language === nextLang || isProcessing) return;
+
+    setIsProcessing(true);
+    setProcessingStatus('analyzing');
+    setTemporaryToast(t('languageRefreshing', nextLang));
+
+    try {
+      const formData = new FormData();
+      formData.append('cvText', cvText);
+      formData.append('targetRole', analysis.targetRole || jobDescription || 'Software Engineer');
+      formData.append('language', nextLang);
+      formData.append('persist', 'false');
+      if (user.fullName) formData.append('fullName', user.fullName);
+
+      const res = await fetch('/api/career/analyze', {
+        method: 'POST',
+        headers: {Authorization: `Bearer ${token}`},
+        body: formData,
+      });
+      const payload = await res.json();
+      if (!res.ok || payload.success === false) throw new Error('language refresh failed');
+
+      const normalized = normalizeApiAnalysis(payload, nextLang);
+      if (!normalized) throw new Error('language refresh failed');
+
+      const refreshedText = String(payload.sourceCvText || cvText).trim();
+      normalized.sourceCvText = refreshedText;
+      normalized.candidateName =
+        resolveCandidateName({
+          candidateName: normalized.candidateName,
+          cvText: refreshedText || normalized.rewrittenCv,
+          fullName: user.fullName,
+        }) || normalized.candidateName;
+
+      setAnalysis(normalized);
+      setCurrentCvId('');
+      setTemporaryToast(t('languageRefreshed', nextLang));
+    } catch {
+      setTemporaryToast(t('languageRefreshFailed', nextLang));
+    } finally {
+      setProcessingStatus('completed');
+      setIsProcessing(false);
+    }
+  };
+
+  const switchLanguage = () => {
+    if (isProcessing) return;
+    const nextLang: Language = lang === 'mn' ? 'en' : 'mn';
+    setLang(nextLang);
+    void refreshAnalysisForLanguage(nextLang);
+  };
+
   const handleLogin = async (email: string, password: string): Promise<string | null> => {
     try {
       const res = await fetch('/api/auth/login', {
@@ -691,7 +778,7 @@ export default function App() {
         const text = await extractTextFromPdfFile(file);
         if (text.length > 40) {
           setRawText(text);
-          setTemporaryToast(lang === 'mn' ? `CV текст уншлаа (${text.length} тэмдэгт).` : `CV text loaded (${text.length} chars).`);
+          setTemporaryToast(tf('cvTextLoaded', lang, {count: text.length}));
         }
       } catch {
         /* server-side parse will try */
@@ -771,12 +858,8 @@ export default function App() {
         const hasNewCv = Boolean(normalized.rewrittenCv.trim());
         setTemporaryToast(
           hasNewCv
-            ? lang === 'mn'
-              ? `Таны CV (${chars || '—'} тэмдэгт) шинжлэгдэж, шинэ CV бэлэн боллоо.`
-              : `Your CV was analyzed (${chars || '—'} chars). New CV is ready.`
-            : lang === 'mn'
-              ? 'Шинэ CV үүсээгүй. PDF-ийн текстийг paste хийж дахин оролдоно уу.'
-              : 'No new CV generated. Paste CV text and try again.',
+            ? tf('analysisReadySummary', lang, {count: chars || '--'})
+            : t('analysisMissingCv', lang),
         );
       }
     } catch (err) {
@@ -851,13 +934,13 @@ export default function App() {
         f.id === id
           ? {
               ...f,
-              suggestion: f.suggestion + (lang === 'mn' ? ' Мөн үр дүнг тоон үзүүлэлтээр тодруулж, target role-ийн keyword-үүдтэй уялдуулах боломжтой.' : ' Also quantify results and align with target role keywords.'),
+              suggestion: `${f.suggestion} ${t('suggestionQuantifyAppend', lang)}`,
               status: 'pending' as const,
             }
           : f,
       ),
     }));
-    setTemporaryToast(lang === 'mn' ? 'AI suggestion дахин үүсгэлээ.' : 'Suggestion regenerated.');
+    setTemporaryToast(t('suggestionRegenned', lang));
   };
 
 
@@ -898,7 +981,7 @@ export default function App() {
 
   if (authLoading || (user && !sessionReady)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="flex min-h-screen items-center justify-center bg-brand-bg">
         <Loader2 className="animate-spin text-slate-400" size={36} />
       </div>
     );
@@ -907,14 +990,14 @@ export default function App() {
   // Auth views (login / register) — no sidebar
   if (activeView === 'login' || activeView === 'register') {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-10">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-brand-bg px-4 py-10">
         <div className="mb-8 flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-xl bg-slate-950 text-white">
+          <div className="flex size-11 items-center justify-center rounded-xl bg-brand-teal text-white">
             <BrainCircuit size={24} />
           </div>
           <div>
-            <p className="text-xl font-black">{copy.appName}</p>
-            <p className="text-xs font-semibold text-slate-500">{copy.subtitle}</p>
+            <p className="text-xl font-black text-brand-dark">{copy.appName}</p>
+            <p className="text-xs font-semibold text-brand-mid">{copy.subtitle}</p>
           </div>
         </div>
 
@@ -935,12 +1018,14 @@ export default function App() {
         </div>
 
         <button
-          className="mt-6 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
-          onClick={() => setLang((v) => (v === 'mn' ? 'en' : 'mn'))}
+          className="mt-6 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-brand-mid hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={isProcessing}
+          onClick={switchLanguage}
           type="button"
+          title={getLanguageToggleLabel(lang)}
         >
-          <span className="inline-flex items-center gap-2">
-            <Languages size={13} /> {lang === 'mn' ? 'English' : 'Монгол'}
+          <span className="inline-flex items-center gap-1.5 font-black tracking-wide">
+            {lang === 'mn' ? 'MN' : 'EN'}
           </span>
         </button>
       </div>
@@ -949,197 +1034,174 @@ export default function App() {
 
   // Main app (authenticated)
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950">
-      <div className="flex min-h-screen flex-col lg:flex-row">
-        <aside className="border-b border-slate-200 bg-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-72 lg:flex-col lg:border-b-0 lg:border-r">
-          <div className="flex items-center justify-between px-4 py-4 lg:block lg:px-5 lg:py-5">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-slate-950 text-white">
-                <BrainCircuit size={22} />
-              </div>
-              <div>
-                <p className="text-lg font-black">{copy.appName}</p>
-                <p className="text-xs font-semibold text-slate-500">{copy.subtitle}</p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-brand-bg text-brand-dark">
 
-            {/* Language toggle */}
-            <div className="flex items-center gap-2 lg:mt-4 lg:flex-col lg:items-stretch lg:gap-2">
-              <button
-                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 lg:w-full"
-                onClick={() => setLang((v) => (v === 'mn' ? 'en' : 'mn'))}
-                type="button"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <Languages size={14} /> {lang === 'mn' ? 'English' : 'Монгол'}
-                </span>
-              </button>
-              {/* Mobile logout – visible only on small screens */}
-              <button
-                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 lg:hidden"
-                onClick={handleLogout}
-                type="button"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <LogOut size={14} /> {copy.logout}
-                </span>
-              </button>
+      {/* ── Fixed top navbar ──────────────────────────────────────── */}
+      <header className="fixed inset-x-0 top-0 z-50 h-16 bg-brand-dark shadow-lg shadow-brand-dark/30">
+        <div className="flex h-full items-center justify-between px-4 sm:px-6">
+
+          {/* Logo */}
+          <div className="flex shrink-0 items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded-lg bg-brand-teal text-white">
+              <BrainCircuit size={20} />
+            </div>
+            <div className="hidden sm:block">
+              <p className="text-sm font-black leading-tight text-white">{copy.appName}</p>
+              <p className="text-[10px] text-white/50">{copy.subtitle}</p>
             </div>
           </div>
 
-          {user && (
-            <div className="hidden px-5 pb-2 lg:block">
-              <div className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-3">
-                {profileImage ? (
-                  <img src={profileImage} alt="Profile" className="size-9 shrink-0 rounded-full object-cover" />
-                ) : (
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-950 text-sm font-black text-white">
-                    {user.fullName.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-slate-950">{user.fullName}</p>
-                  <p className="truncate text-xs text-slate-500">{user.email}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <nav className="flex gap-2 overflow-x-auto px-4 pb-4 lg:flex-col lg:overflow-visible lg:px-5 lg:py-3">
+          {/* Nav items */}
+          <nav className="mx-4 flex items-center gap-0.5 overflow-x-auto">
             {navigation.map((item) => (
               <button
                 key={item.id}
-                className={`nav-button flex min-w-max items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold lg:min-w-0 ${
+                className={`nav-button flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-2 text-xs font-bold transition-colors ${
                   activeView === item.id
-                    ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/10'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
+                    ? 'bg-brand-teal text-white shadow-sm shadow-brand-teal/30'
+                    : 'text-white/60 hover:bg-white/10 hover:text-white'
                 }`}
                 onClick={() => navigateTo(item.id)}
                 type="button"
               >
-                <item.icon size={18} />
-                {t(item.labelKey, lang)}
+                <item.icon size={15} />
+                <span className="hidden lg:inline">{t(item.labelKey, lang)}</span>
               </button>
             ))}
           </nav>
 
-          <div className="hidden px-5 py-4 lg:block">
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-              <div className="flex items-center gap-2 text-emerald-800">
-                <ShieldCheck size={18} />
-                <p className="text-sm font-black">{t('privacyTitle', lang)}</p>
-              </div>
-              <p className="mt-2 text-xs leading-5 text-emerald-900">
-                {t('privacyDesc', lang)}
-              </p>
-            </div>
-          </div>
-
-          {/* Desktop logout – pinned to bottom of sidebar */}
-          <div className="mt-auto hidden border-t border-slate-200 px-5 py-4 lg:block">
+          {/* Actions: profile + language + logout */}
+          <div className="flex shrink-0 items-center gap-2">
+            {user && (
+              <ProfileDropdown
+                user={user}
+                lang={lang}
+                profileImage={profileImage}
+                onLogout={handleLogout}
+                onNavigate={navigateTo}
+              />
+            )}
             <button
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-700"
+              className="flex size-9 items-center justify-center rounded-full border border-white/20 text-xs font-black text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+              disabled={isProcessing}
+              onClick={switchLanguage}
+              type="button"
+              title={getLanguageToggleLabel(lang)}
+            >
+              {lang === 'mn' ? 'MN' : 'EN'}
+            </button>
+            <button
+              className="flex size-9 items-center justify-center rounded-full border border-white/20 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
               onClick={handleLogout}
               type="button"
+              title={copy.logout}
             >
-              <LogOut size={18} />
-              {copy.logout}
+              <LogOut size={16} />
             </button>
           </div>
-        </aside>
+        </div>
+      </header>
 
-        <main className="flex-1 px-4 py-5 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl space-y-5">
+      {/* ── Stepper — fixed below navbar, no background ───────────── */}
+      <div className="fixed inset-x-0 top-16 z-40 flex justify-center py-3">
+        <WorkflowStepper
+          steps={workflowSteps}
+          activeView={activeView}
+          lang={lang}
+          onNavigate={navigateTo}
+        />
+      </div>
+
+      {/* ── Main content ──────────────────────────────────────────── */}
+      <main className="pb-10 pt-[108px] px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl space-y-5">
+          {activeView !== 'overview' && (
             <header className="flex flex-col gap-4 border-b border-slate-200 pb-5 md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="text-3xl font-black text-slate-950 sm:text-4xl">{copy.welcome}</h1>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">{copy.welcomeDesc}</p>
+                <h1 className="text-3xl font-black text-brand-dark sm:text-4xl">{copy.welcome}</h1>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-brand-mid sm:text-base">{copy.welcomeDesc}</p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[340px]">
-                  <MiniStat label={t('statOverall', lang)} value={overall ? `${overall}/100` : '--'} />
-                  <MiniStat label={t('statRewrite', lang)} value={`${acceptedCount}/${analysis.feedback.length}`} />
-                  <MiniStat label={t('statStatus', lang)} value={getStatusText(processingStatus, lang)} compact />
-                </div>
-                {user && (
-                  <ProfileDropdown
-                    user={user}
-                    lang={lang}
-                    profileImage={profileImage}
-                    onLogout={handleLogout}
-                    onNavigate={navigateTo}
-                  />
-                )}
+              <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[340px]">
+                <MiniStat label={t('statOverall', lang)} value={overall ? `${overall}/100` : '--'} />
+                <MiniStat label={t('statRewrite', lang)} value={`${acceptedCount}/${analysis.feedback.length}`} />
+                <MiniStat label={t('statStatus', lang)} value={getStatusText(processingStatus, lang)} compact />
               </div>
             </header>
+          )}
 
-            {toast && (
-              <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-xl">
-                {toast}
-              </div>
-            )}
-
-            <div key={activeView} className="slow-view-enter">
-              {activeView === 'overview' && (
-                <OverviewView lang={lang} records={records} analysis={analysis} overall={overall} setActiveView={navigateTo} />
-              )}
-              {activeView === 'upload' && (
-                <UploadView
-                  lang={lang}
-                  copy={copy}
-                  selectedFile={selectedFile}
-                  uploadError={uploadError}
-                  rawText={rawText}
-                  jobDescription={jobDescription}
-                  isProcessing={isProcessing}
-                  processingStatus={processingStatus}
-                  fileInputRef={fileInputRef}
-                  profileImageRef={profileImageRef}
-                  profileImage={profileImage}
-                  setRawText={setRawText}
-                  setJobDescription={setJobDescription}
-                  handleFile={handleFile}
-                  handleProfileImage={handleProfileImage}
-                  clearProfileImage={() => setProfileImage('')}
-                  runAnalysis={runAnalysis}
-                />
-              )}
-              {activeView === 'analysis' && <AnalysisView analysis={analysis} overall={overall} lang={lang} onReanalyze={() => navigateTo('upload')} onExport={() => navigateTo('rewrite')} />}
-              {activeView === 'rewrite' && (
-                <RewriteView
-                  analysis={analysis}
-                  lang={lang}
-                  acceptFeedback={acceptFeedback}
-                  rejectFeedback={rejectFeedback}
-                  regenerateFeedback={regenerateFeedback}
-                  onContinue={() => navigateTo('export')}
-                />
-              )}
-              {activeView === 'interview' && <InterviewView analysis={analysis} lang={lang} />}
-              {activeView === 'career' && <CareerView analysis={analysis} lang={lang} />}
-              {activeView === 'export' && (
-                <ExportView
-                  analysis={analysis}
-                  lang={lang}
-                  profileImage={profileImage}
-                  accountFullName={user?.fullName}
-                  cvSessionKey={cvSessionKey}
-                  exportOptimizedCv={() => exportImprovedCv()}
-                />
-              )}
-              {activeView === 'history' && (
-                <HistoryView
-                  lang={lang}
-                  records={records}
-                  historyLoading={historyLoading}
-                  onLoad={loadHistoryItem}
-                  onUpload={() => navigateTo('upload')}
-                />
-              )}
+          {toast && (
+            <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-brand-dark px-5 py-3 text-sm font-black text-white shadow-xl">
+              {toast}
             </div>
+          )}
+
+          <div key={activeView} className="slow-view-enter">
+            {activeView === 'overview' && (
+              <DashboardView
+                lang={lang}
+                records={records}
+                analysis={analysis}
+                overall={overall}
+                user={user}
+                setActiveView={navigateTo}
+              />
+            )}
+            {activeView === 'upload' && (
+              <UploadView
+                lang={lang}
+                copy={copy}
+                selectedFile={selectedFile}
+                uploadError={uploadError}
+                rawText={rawText}
+                jobDescription={jobDescription}
+                isProcessing={isProcessing}
+                processingStatus={processingStatus}
+                fileInputRef={fileInputRef}
+                profileImageRef={profileImageRef}
+                profileImage={profileImage}
+                setRawText={setRawText}
+                setJobDescription={setJobDescription}
+                handleFile={handleFile}
+                handleProfileImage={handleProfileImage}
+                clearProfileImage={() => setProfileImage('')}
+                runAnalysis={runAnalysis}
+              />
+            )}
+            {activeView === 'analysis' && <AnalysisView analysis={analysis} overall={overall} lang={lang} onReanalyze={() => navigateTo('upload')} onExport={() => navigateTo('rewrite')} />}
+            {activeView === 'rewrite' && (
+              <RewriteView
+                analysis={analysis}
+                lang={lang}
+                acceptFeedback={acceptFeedback}
+                rejectFeedback={rejectFeedback}
+                regenerateFeedback={regenerateFeedback}
+                onContinue={() => navigateTo('export')}
+              />
+            )}
+            {activeView === 'interview' && <InterviewView analysis={analysis} lang={lang} />}
+            {activeView === 'career' && <CareerView analysis={analysis} lang={lang} />}
+            {activeView === 'export' && (
+              <ExportView
+                analysis={analysis}
+                lang={lang}
+                profileImage={profileImage}
+                accountFullName={user?.fullName}
+                cvSessionKey={cvSessionKey}
+                exportOptimizedCv={() => exportImprovedCv()}
+              />
+            )}
+            {activeView === 'history' && (
+              <HistoryView
+                lang={lang}
+                records={records}
+                historyLoading={historyLoading}
+                onLoad={loadHistoryItem}
+                onUpload={() => navigateTo('upload')}
+              />
+            )}
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
@@ -1164,7 +1226,7 @@ function LoginForm({copy, onLogin, onGoRegister}: {copy: AppCopy; onLogin: (e: s
   return (
     <form onSubmit={submit} className="space-y-5">
       <div>
-        <h2 className="text-2xl font-black text-slate-950">{copy.loginTitle}</h2>
+        <h2 className="text-2xl font-black text-brand-dark">{copy.loginTitle}</h2>
         <p className="mt-1 text-sm text-slate-500">{copy.loginDesc}</p>
       </div>
       {error && (
@@ -1198,7 +1260,7 @@ function LoginForm({copy, onLogin, onGoRegister}: {copy: AppCopy; onLogin: (e: s
         </label>
       </div>
       <button
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-5 py-3 text-sm font-black text-white hover:bg-slate-800 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-dark px-5 py-3 text-sm font-black text-white hover:bg-slate-800 disabled:opacity-50"
         type="submit"
         disabled={loading}
       >
@@ -1207,7 +1269,7 @@ function LoginForm({copy, onLogin, onGoRegister}: {copy: AppCopy; onLogin: (e: s
       </button>
       <p className="text-center text-sm text-slate-500">
         {copy.noAccount}{' '}
-        <button type="button" onClick={onGoRegister} className="font-black text-slate-950 hover:underline">
+        <button type="button" onClick={onGoRegister} className="font-black text-brand-dark hover:underline">
           {copy.register}
         </button>
       </p>
@@ -1234,7 +1296,7 @@ function RegisterForm({copy, onRegister, onGoLogin}: {copy: AppCopy; onRegister:
   return (
     <form onSubmit={submit} className="space-y-5">
       <div>
-        <h2 className="text-2xl font-black text-slate-950">{copy.registerTitle}</h2>
+        <h2 className="text-2xl font-black text-brand-dark">{copy.registerTitle}</h2>
         <p className="mt-1 text-sm text-slate-500">{copy.registerDesc}</p>
       </div>
       {error && (
@@ -1279,7 +1341,7 @@ function RegisterForm({copy, onRegister, onGoLogin}: {copy: AppCopy; onRegister:
         </label>
       </div>
       <button
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-5 py-3 text-sm font-black text-white hover:bg-slate-800 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-dark px-5 py-3 text-sm font-black text-white hover:bg-slate-800 disabled:opacity-50"
         type="submit"
         disabled={loading}
       >
@@ -1288,7 +1350,7 @@ function RegisterForm({copy, onRegister, onGoLogin}: {copy: AppCopy; onRegister:
       </button>
       <p className="text-center text-sm text-slate-500">
         {copy.hasAccount}{' '}
-        <button type="button" onClick={onGoLogin} className="font-black text-slate-950 hover:underline">
+        <button type="button" onClick={onGoLogin} className="font-black text-brand-dark hover:underline">
           {copy.login}
         </button>
       </p>
@@ -1302,7 +1364,7 @@ function MiniStat({label, value, compact}: {label: string; value: string; compac
   return (
     <div className="hover-lift rounded-lg border border-slate-200 bg-white px-3 py-3">
       <p className="text-[10px] font-black uppercase text-slate-500">{label}</p>
-      <p className={`${compact ? 'text-xs leading-5' : 'text-xl'} mt-1 font-black text-slate-950`}>{value}</p>
+      <p className={`${compact ? 'text-xs leading-5' : 'text-xl'} mt-1 font-black text-brand-dark`}>{value}</p>
     </div>
   );
 }
@@ -1330,13 +1392,13 @@ function OverviewView({lang, records, analysis, overall, setActiveView}: {lang: 
                       <FileText size={20} />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-slate-950">{record.fileName}</p>
+                      <p className="truncate text-sm font-black text-brand-dark">{record.fileName}</p>
                       <p className="text-xs font-medium text-slate-500">{record.fileType.toUpperCase()} / {record.uploadedAt}</p>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusPill status={record.status} lang={lang} />
-                    <span className="rounded-md bg-slate-950 px-3 py-1 text-xs font-black text-white">{record.overall ? `${record.overall}/100` : '--'}</span>
+                    <span className="rounded-md bg-brand-dark px-3 py-1 text-xs font-black text-white">{record.overall ? `${record.overall}/100` : '--'}</span>
                   </div>
                 </div>
               ))}
@@ -1366,24 +1428,13 @@ function OverviewView({lang, records, analysis, overall, setActiveView}: {lang: 
             ].map((action) => (
               <button
                 key={action.label}
-                className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-3 text-left text-sm font-black text-slate-800 hover:border-slate-300 hover:bg-slate-50"
+                className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-3 text-left text-sm font-black text-slate-800 hover:border-slate-300 hover:bg-brand-bg"
                 onClick={() => setActiveView(action.view)}
                 type="button"
               >
                 <span className="inline-flex items-center gap-3"><action.icon size={18} /> {action.label}</span>
                 <ArrowRight size={16} />
               </button>
-            ))}
-          </div>
-        </Panel>
-
-        <Panel title={t('securityTitle', lang)} icon={LockKeyhole}>
-          <div className="space-y-3 text-sm text-slate-700">
-            {tArr('securityItems', lang).map((item) => (
-              <div key={item} className="flex gap-3">
-                <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-600" size={17} />
-                <span>{item}</span>
-              </div>
             ))}
           </div>
         </Panel>
@@ -1401,7 +1452,7 @@ function UploadView({lang, copy, selectedFile, uploadError, rawText, jobDescript
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
       <Panel title={copy.uploadTitle} icon={UploadCloud} subtitle={copy.uploadDesc}>
         <div
-          className="rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center hover:border-blue-400 hover:bg-blue-50/40"
+          className="rounded-lg border-2 border-dashed border-slate-300 bg-brand-bg p-6 text-center hover:border-blue-400 hover:bg-blue-50/40"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
@@ -1411,14 +1462,14 @@ function UploadView({lang, copy, selectedFile, uploadError, rawText, jobDescript
         >
           <input ref={fileInputRef} className="hidden" type="file" accept=".pdf,application/pdf"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-          <div className="mx-auto flex size-14 items-center justify-center rounded-lg bg-slate-950 text-white">
+          <div className="mx-auto flex size-14 items-center justify-center rounded-lg bg-brand-dark text-white">
             <UploadCloud size={28} />
           </div>
-          <h2 className="mt-4 text-lg font-black text-slate-950">
+          <h2 className="mt-4 text-lg font-black text-brand-dark">
             {selectedFile ? selectedFile.name : copy.dropFile}
           </h2>
           <p className="mt-2 text-sm text-slate-500">PDF / Max 10MB</p>
-          <button className="mt-5 rounded-lg bg-slate-950 px-5 py-3 text-sm font-black text-white hover:bg-slate-800"
+          <button className="mt-5 rounded-lg bg-brand-dark px-5 py-3 text-sm font-black text-white hover:bg-slate-800"
             onClick={() => fileInputRef.current?.click()} type="button">{copy.chooseFile}</button>
           {uploadError && (
             <div className="mx-auto mt-4 flex max-w-xl items-center justify-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
@@ -1428,13 +1479,13 @@ function UploadView({lang, copy, selectedFile, uploadError, rawText, jobDescript
         </div>
 
         {/* Profile image upload */}
-        <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <div className="mt-5 rounded-lg border border-slate-200 bg-brand-bg p-4">
           <p className="mb-3 text-xs font-black uppercase text-slate-500">
             {t('profilePhotoLabel', lang)}
           </p>
           <div className="flex items-center gap-4">
             {profileImage ? (
-              <img src={profileImage} alt="Profile preview" className="size-16 shrink-0 rounded-full border-2 border-slate-200 object-cover shadow-sm" />
+              <img src={profileImage} alt={t('profilePreviewAlt', lang)} className="size-16 shrink-0 rounded-full border-2 border-slate-200 object-cover shadow-sm" />
             ) : (
               <div className="flex size-16 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-slate-300 bg-white text-slate-400">
                 <Camera size={24} />
@@ -1502,7 +1553,7 @@ function UploadView({lang, copy, selectedFile, uploadError, rawText, jobDescript
                 {status === processingStatus && isProcessing ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />}
               </div>
               <div>
-                <p className="text-sm font-black text-slate-950">{getStatusText(status, lang)}</p>
+                <p className="text-sm font-black text-brand-dark">{getStatusText(status, lang)}</p>
                 <p className="text-xs leading-5 text-slate-500">
                   {status === 'uploaded' && t('stepUploadedDesc', lang)}
                   {status === 'parsing' && t('stepParsingDesc', lang)}
@@ -1540,11 +1591,11 @@ function buildSectionScores(analysis: AnalysisResult, lang: Language) {
   const hasContactIssue = analysis.weaknesses.some(w => /холбоо|contact|email|утас|phone/i.test(w));
   const hasEduIssue = analysis.weaknesses.some(w => /боловсрол|education|сургууль|degree/i.test(w));
   const sections = [
-    {label: t('secContact', lang),    score: hasContactIssue ? 0 : 8},
-    {label: t('secSummary', lang),    score: Math.round(find('readability') / 10)},
-    {label: t('secExperience', lang), score: Math.round(find('experience') / 10)},
-    {label: t('secEducation', lang),  score: hasEduIssue ? 3 : Math.round(find('readability') / 14)},
-    {label: t('secSkills', lang),     score: Math.round(find('skillsMatch') / 10)},
+    {label: t('secContact', lang),    score: hasContactIssue ? 0 : 8, metricKey: ''},
+    {label: t('secSummary', lang),    score: Math.round(find('readability') / 10), metricKey: 'readability'},
+    {label: t('secExperience', lang), score: Math.round(find('experience') / 10), metricKey: 'experience'},
+    {label: t('secEducation', lang),  score: hasEduIssue ? 3 : Math.round(find('readability') / 14), metricKey: ''},
+    {label: t('secSkills', lang),     score: Math.round(find('skillsMatch') / 10), metricKey: 'skillsMatch'},
   ];
   return sections.map(s => ({...s, max: 10, bad: s.score < 3}));
 }
@@ -1554,10 +1605,10 @@ function AnalysisView({analysis, overall, lang, onReanalyze, onExport}: {
   onReanalyze: () => void; onExport: () => void;
 }) {
   const levelLabel = overall >= 75
-    ? (lang === 'mn' ? 'Өндөр' : 'High')
+    ? t('levelHigh', lang)
     : overall >= 50
-      ? (lang === 'mn' ? 'Дунд' : 'Medium')
-      : (lang === 'mn' ? 'Бага' : 'Low');
+      ? t('levelMedium', lang)
+      : t('levelLow', lang);
   const levelColor = overall >= 75 ? 'bg-emerald-100 text-emerald-700' : overall >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
   const sections = buildSectionScores(analysis, lang);
   const standardMatch = sections.length > 0
@@ -1570,9 +1621,9 @@ function AnalysisView({analysis, overall, lang, onReanalyze, onExport}: {
     <div className="w-full space-y-5">
       {/* Header label */}
       <div>
-        <p className="text-xs font-black uppercase tracking-widest text-indigo-600">{lang === 'mn' ? 'AI ШИНЖИЛГЭЭ' : 'AI ANALYSIS'}</p>
-        <h2 className="mt-1 text-3xl font-black text-slate-950">{lang === 'mn' ? 'CV Анализ' : 'CV Analysis'}</h2>
-        <p className="text-sm text-slate-500">{lang === 'mn' ? 'AI тусламжтайгаар CV загварыг сайжруул' : 'Improve your CV with AI assistance'}</p>
+        <p className="text-xs font-black uppercase tracking-widest text-indigo-600">{t('aiAnalysisTag', lang)}</p>
+        <h2 className="mt-1 text-3xl font-black text-brand-dark">{t('cvAnalysisTitle', lang)}</h2>
+        <p className="text-sm text-slate-500">{t('cvAnalysisSubtitle', lang)}</p>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
@@ -1589,11 +1640,11 @@ function AnalysisView({analysis, overall, lang, onReanalyze, onExport}: {
                   {standardMatch > 0 && (
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-4 py-1 text-sm font-black text-blue-700">
                       <FileCheck2 size={14} />
-                      {lang === 'mn' ? `Стандарт CV тохирол: ${standardMatch}%` : `Standard CV match: ${standardMatch}%`}
+                      {tf('standardMatchValue', lang, {value: standardMatch})}
                     </span>
                   )}
                 </div>
-                <p className="text-sm leading-7 text-slate-700">{analysis.summary || (lang === 'mn' ? 'CV шинжилгээ хийгдлээ.' : 'CV analysis complete.')}</p>
+                <p className="text-sm leading-7 text-slate-700">{analysis.summary || t('cvAnalysisComplete', lang)}</p>
               </div>
             </div>
           </div>
@@ -1604,7 +1655,7 @@ function AnalysisView({analysis, overall, lang, onReanalyze, onExport}: {
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
                 <div className="mb-3 flex items-center gap-2 text-emerald-700">
                   <CheckCircle2 size={18} />
-                  <p className="text-sm font-black">{lang === 'mn' ? 'Давуу талууд' : 'Strengths'}</p>
+                  <p className="text-sm font-black">{t('analysisStrengths', lang)}</p>
                 </div>
                 <ul className="space-y-2">
                   {analysis.strengths.slice(0, 5).map(item => (
@@ -1618,7 +1669,7 @@ function AnalysisView({analysis, overall, lang, onReanalyze, onExport}: {
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
                 <div className="mb-3 flex items-center gap-2 text-amber-700">
                   <AlertTriangle size={18} />
-                  <p className="text-sm font-black">{lang === 'mn' ? 'Сул талууд' : 'Weaknesses'}</p>
+                  <p className="text-sm font-black">{t('analysisWeaknesses', lang)}</p>
                 </div>
                 <ul className="space-y-2">
                   {analysis.weaknesses.slice(0, 5).map(item => (
@@ -1637,7 +1688,7 @@ function AnalysisView({analysis, overall, lang, onReanalyze, onExport}: {
             <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
               <div className="mb-3 flex items-center gap-2 text-indigo-700">
                 <Sparkles size={18} />
-                <p className="text-sm font-black">{lang === 'mn' ? 'Зөвлөмжүүд' : 'Recommendations'}</p>
+                <p className="text-sm font-black">{t('recommendationsTitle', lang)}</p>
               </div>
               <ol className="grid gap-3 lg:grid-cols-2">
                 {recommendations.map((rec, i) => (
@@ -1657,7 +1708,7 @@ function AnalysisView({analysis, overall, lang, onReanalyze, onExport}: {
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5">
               <div className="mb-3 flex items-center gap-2 text-rose-700">
                 <AlertTriangle size={18} />
-                <p className="text-sm font-black">{lang === 'mn' ? 'Дутуу хэсгүүд' : 'Missing sections'}</p>
+                <p className="text-sm font-black">{t('missingSections', lang)}</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 {missingItems.slice(0, 8).map((item) => (
@@ -1669,7 +1720,7 @@ function AnalysisView({analysis, overall, lang, onReanalyze, onExport}: {
 
           {/* Section scores */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="mb-4 text-sm font-black text-slate-950">{lang === 'mn' ? 'Хэсэг бүрийн үнэлгээ' : 'Section scores'}</p>
+            <p className="mb-4 text-sm font-black text-brand-dark">{t('sectionScoresTitle', lang)}</p>
             <div className="space-y-4">
               {sections.map(sec => (
                 <div key={sec.label}>
@@ -1678,10 +1729,10 @@ function AnalysisView({analysis, overall, lang, onReanalyze, onExport}: {
                     <div className="flex items-center gap-2">
                       {sec.bad && (
                         <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-black text-rose-600">
-                          {lang === 'mn' ? 'Дутуу' : 'Missing'}
+                          {t('missingBadge', lang)}
                         </span>
                       )}
-                      <span className="text-sm font-black text-slate-950">{sec.score}/{sec.max}</span>
+                      <span className="text-sm font-black text-brand-dark">{sec.score}/{sec.max}</span>
                     </div>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100">
@@ -1690,12 +1741,9 @@ function AnalysisView({analysis, overall, lang, onReanalyze, onExport}: {
                       style={{width: `${(sec.score / sec.max) * 100}%`}}
                     />
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">{analysis.scores.find(s => {
-                    if (sec.label.includes('Товч') || sec.label.includes('Summary')) return s.key === 'readability';
-                    if (sec.label.includes('Ур') || sec.label.includes('Skill')) return s.key === 'skillsMatch';
-                    if (sec.label.includes('Ажлын') || sec.label.includes('Work')) return s.key === 'experience';
-                    return false;
-                  })?.explanation ?? ''}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {sec.metricKey ? analysis.scores.find(s => s.key === sec.metricKey)?.explanation ?? '' : ''}
+                  </p>
                 </div>
               ))}
             </div>
@@ -1705,17 +1753,17 @@ function AnalysisView({analysis, overall, lang, onReanalyze, onExport}: {
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={onReanalyze}
-              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-brand-bg"
               type="button"
             >
-              {lang === 'mn' ? 'Дахин анализ хийх' : 'Re-analyze'}
+              {t('reanalyzeBtn', lang)}
             </button>
             <button
               onClick={onExport}
               className="rounded-xl bg-indigo-600 px-4 py-3 text-sm font-black text-white hover:bg-indigo-500"
               type="button"
             >
-              {lang === 'mn' ? 'CV үүсгэх' : 'Build CV'}
+              {t('buildCvBtn', lang)}
             </button>
           </div>
         </aside>
@@ -1734,9 +1782,9 @@ function RewriteView({analysis, lang, acceptFeedback, rejectFeedback, regenerate
 
   return (
     <div className="space-y-5">
-      <Panel title={lang === 'mn' ? 'AI rewrite саналууд' : 'AI rewrite suggestions'} icon={Sparkles}>
+      <Panel title={t('aiRewriteTitle', lang)} icon={Sparkles}>
         {analysis.feedback.length === 0 ? (
-          <p className="text-sm text-slate-500">{lang === 'mn' ? 'Эхлээд CV upload хийж шинжилгээ хийлгэнэ үү.' : 'Upload and analyze a CV first.'}</p>
+          <p className="text-sm text-slate-500">{t('uploadFirstMsg', lang)}</p>
         ) : (
           <div className="grid gap-4 xl:grid-cols-3">
             {analysis.feedback.map((item) => (
@@ -1746,17 +1794,17 @@ function RewriteView({analysis, lang, acceptFeedback, rejectFeedback, regenerate
                     <button
                       className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-3 text-xs font-black uppercase text-white hover:bg-emerald-600 disabled:opacity-50"
                       disabled={item.status === 'accepted'} onClick={() => acceptFeedback(item.id)} type="button">
-                      <Check size={15} /> {item.status === 'accepted' ? (lang === 'mn' ? 'Батлагдсан' : 'Accepted') : (lang === 'mn' ? 'Батлах' : 'Accept')}
+                      <Check size={15} /> {item.status === 'accepted' ? t('acceptedBtn', lang) : t('acceptBtn', lang)}
                     </button>
                     <button
-                      className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-slate-50"
+                      className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-brand-bg"
                       onClick={() => regenerateFeedback(item.id)} type="button">
-                      <RefreshCw size={15} /> {lang === 'mn' ? 'Дахин' : 'Regen'}
+                      <RefreshCw size={15} /> {t('regenBtn', lang)}
                     </button>
                     <button
                       className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-rose-200 px-4 py-3 text-xs font-black uppercase text-rose-700 hover:bg-rose-50"
                       onClick={() => rejectFeedback(item.id)} type="button">
-                      <X size={15} /> {lang === 'mn' ? 'Татгалзах' : 'Reject'}
+                      <X size={15} /> {t('rejectBtn', lang)}
                     </button>
                   </div>
                 }
@@ -1774,7 +1822,7 @@ function RewriteView({analysis, lang, acceptFeedback, rejectFeedback, regenerate
             type="button"
           >
             <Download size={18} />
-            {lang === 'mn' ? 'CV татаж авах' : 'Download CV'}
+            {t('downloadCvBtn', lang)}
             <ArrowRight size={18} />
           </button>
         </div>
@@ -1786,10 +1834,10 @@ function RewriteView({analysis, lang, acceptFeedback, rejectFeedback, regenerate
 function InterviewView({analysis, lang}: {analysis: AnalysisResult; lang: Language}) {
   return (
     <div className="grid gap-5 lg:grid-cols-2">
-      <QuestionPanel title={lang === 'mn' ? 'Техникийн асуулт' : 'Technical'} icon={BrainCircuit} items={analysis.interview.technical} lang={lang} />
+      <QuestionPanel title={t('technicalTitle', lang)} icon={BrainCircuit} items={analysis.interview.technical} lang={lang} />
       <QuestionPanel title="HR" icon={UserRound} items={analysis.interview.hr} lang={lang} />
-      <QuestionPanel title={lang === 'mn' ? 'Зан чанарын асуулт' : 'Behavioral'} icon={MessageSquareText} items={analysis.interview.behavioral} lang={lang} />
-      <Panel title={lang === 'mn' ? 'Хариултын стратеги' : 'Answer strategy'} icon={BookOpenCheck}>
+      <QuestionPanel title={t('behavioralTitle', lang)} icon={MessageSquareText} items={analysis.interview.behavioral} lang={lang} />
+      <Panel title={t('answerStrategy', lang)} icon={BookOpenCheck}>
         <Checklist items={analysis.interview.suggestedAnswers} title="STAR" positive />
       </Panel>
     </div>
@@ -1799,24 +1847,24 @@ function InterviewView({analysis, lang}: {analysis: AnalysisResult; lang: Langua
 function CareerView({analysis, lang}: {analysis: AnalysisResult; lang: Language}) {
   return (
     <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-      <Panel title={lang === 'mn' ? 'Карьерын зөвлөмж' : 'Career recommendation'} icon={GraduationCap}>
-        <p className="text-xs font-black uppercase text-slate-500">{lang === 'mn' ? 'Одоогийн түвшин' : 'Current level'}</p>
-        <p className="mt-2 text-2xl font-black text-slate-950">{analysis.career.currentLevel || '--'}</p>
-        <p className="mt-5 text-xs font-black uppercase text-slate-500">{lang === 'mn' ? 'Тооцоолсон хугацаа' : 'Estimated duration'}</p>
+      <Panel title={t('careerRecTitle', lang)} icon={GraduationCap}>
+        <p className="text-xs font-black uppercase text-slate-500">{t('currentLevelLabel', lang)}</p>
+        <p className="mt-2 text-2xl font-black text-brand-dark">{analysis.career.currentLevel || '--'}</p>
+        <p className="mt-5 text-xs font-black uppercase text-slate-500">{t('estimatedDuration', lang)}</p>
         <p className="mt-2 rounded-lg bg-blue-50 px-4 py-3 text-sm font-black text-blue-800">{analysis.career.estimatedDuration || '--'}</p>
         <div className="mt-5">
-          <Checklist title={lang === 'mn' ? 'Санал болгох ажлын байр' : 'Recommended roles'} items={analysis.career.recommendedRoles} positive />
+          <Checklist title={t('recommendedRoles', lang)} items={analysis.career.recommendedRoles} positive />
         </div>
       </Panel>
       <div className="space-y-5">
-        <Panel title={lang === 'mn' ? 'Дутуу skill' : 'Missing skills'} icon={Target}>
+        <Panel title={t('missingSkillsTitle', lang)} icon={Target}>
           <KeywordCloud items={analysis.career.missingSkills} tone="missing" />
         </Panel>
-        <Panel title={lang === 'mn' ? '3-6 сарын roadmap' : '3-6 month roadmap'} icon={GraduationCap}>
+        <Panel title={t('roadmapTitle', lang)} icon={GraduationCap}>
           <div className="grid gap-3 md:grid-cols-2">
             {analysis.career.roadmap.map((step, i) => (
               <div key={step} className="rounded-lg border border-slate-200 bg-white p-4">
-                <div className="mb-3 flex size-9 items-center justify-center rounded-lg bg-slate-950 text-sm font-black text-white">{i + 1}</div>
+                <div className="mb-3 flex size-9 items-center justify-center rounded-lg bg-brand-dark text-sm font-black text-white">{i + 1}</div>
                 <p className="text-sm leading-6 text-slate-700">{step}</p>
               </div>
             ))}
@@ -1845,7 +1893,7 @@ function ExportView({
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       {/* CV Preview — shown ABOVE the download button */}
-      <Panel title={lang === 'mn' ? 'Урьдчилан харах (Preview)' : 'Preview'} icon={FileCheck2}>
+      <Panel title={t('previewPanelTitle', lang)} icon={FileCheck2}>
         <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
           {/* Navy sidebar + content layout mimicking the exported PDF */}
           <div className="flex min-h-[420px]">
@@ -1854,12 +1902,12 @@ function ExportView({
               <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-white/10 text-2xl font-black text-white">
                 {(analysis.candidateName || 'C').charAt(0).toUpperCase()}
               </div>
-              <p className="text-xs font-black uppercase tracking-widest text-slate-400">{lang === 'mn' ? 'Мэргэжил' : 'Role'}</p>
+              <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t('previewRoleLabel', lang)}</p>
               <p className="mt-1 text-sm font-bold text-slate-100 leading-5">{analysis.targetRole || '—'}</p>
 
               {analysis.keywords.recommended.length > 0 && (
                 <div className="mt-5">
-                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">{lang === 'mn' ? 'Ур чадвар' : 'Skills'}</p>
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t('previewSkillsLabel', lang)}</p>
                   <div className="mt-2 space-y-1">
                     {analysis.keywords.recommended.slice(0, 6).map((kw) => (
                       <p key={kw} className="text-xs font-medium text-slate-300">{kw}</p>
@@ -1871,24 +1919,24 @@ function ExportView({
 
             {/* Main content */}
             <div className="flex-1 p-6">
-              <p className="text-xl font-black text-slate-950">{analysis.candidateName || (lang === 'mn' ? 'Нэр' : 'Name')}</p>
+              <p className="text-xl font-black text-brand-dark">{analysis.candidateName || t('previewNameFallback', lang)}</p>
 
-              <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-blue-600">{lang === 'mn' ? 'Мэргэжлийн хураангуй' : 'Professional Summary'}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-600">{analysis.summary || (lang === 'mn' ? 'CV шинжилгээний дараа гарна.' : 'Run analysis to see preview.')}</p>
+              <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-blue-600">{t('previewSummaryTitle', lang)}</p>
+              <p className="mt-1 text-xs leading-5 text-brand-mid">{analysis.summary || t('previewSummaryFallback', lang)}</p>
 
               {analysis.rewrittenCv.trim() && (
                 <>
-                  <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-blue-600">{lang === 'mn' ? 'Сайжруулсан CV' : 'Rewritten CV'}</p>
+                  <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-blue-600">{t('previewRewrittenTitle', lang)}</p>
                   <pre className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-700 line-clamp-6">{analysis.rewrittenCv.slice(0, 400)}{analysis.rewrittenCv.length > 400 ? '…' : ''}</pre>
                 </>
               )}
 
               {analysis.strengths.length > 0 && (
                 <div className="mt-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">{lang === 'mn' ? 'Давуу тал' : 'Strengths'}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">{t('previewStrengthsTitle', lang)}</p>
                   <div className="mt-1 space-y-0.5">
                     {analysis.strengths.slice(0, 3).map((s) => (
-                      <p key={s} className="text-xs text-slate-600">• {s}</p>
+                      <p key={s} className="text-xs text-brand-mid">• {s}</p>
                     ))}
                   </div>
                 </div>
@@ -1896,7 +1944,7 @@ function ExportView({
             </div>
           </div>
         </div>
-        <p className="mt-3 text-xs text-slate-400 text-center">{lang === 'mn' ? 'Энэ бол PDF-ийн хялбаршуулсан урьдчилан харалт юм.' : 'This is a simplified preview of the exported PDF.'}</p>
+        <p className="mt-3 text-xs text-slate-400 text-center">{t('previewNote', lang)}</p>
       </Panel>
 
       {/* Download button — BELOW the preview */}
@@ -1906,12 +1954,10 @@ function ExportView({
           onClick={() => exportOptimizedCv()}
           type="button"
         >
-          <Download size={20} /> {lang === 'mn' ? 'PDF татаж авах' : 'Download PDF'}
+          <Download size={20} /> {t('downloadPdfBtn', lang)}
         </button>
         <p className="mt-4 text-center text-xs leading-5 text-slate-500">
-          {lang === 'mn'
-            ? 'PDF нь professional хоёр баганат загвараар үүснэ. Профайл зураг оруулсан бол PDF-д харагдана.'
-            : 'PDF is generated as a professional two-column layout. Your profile photo will appear if uploaded.'}
+          {t('pdfNote', lang)}
         </p>
       </div>
     </div>
@@ -1926,21 +1972,21 @@ function HistoryView({lang, records, historyLoading, onLoad, onUpload}: {
   onUpload: () => void;
 }) {
   return (
-    <Panel title={lang === 'mn' ? 'CV шинжилгээний түүх' : 'CV Analysis History'} icon={History}>
+    <Panel title={t('historyPanelTitle', lang)} icon={History}>
       {records.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <div className="flex size-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
             <History size={32} />
           </div>
           <p className="text-sm font-bold text-slate-500">
-            {lang === 'mn' ? 'Одоохондоо CV шинжилгээний түүх байхгүй байна.' : 'No CV analysis history yet.'}
+            {t('noHistoryMsg', lang)}
           </p>
           <button
             onClick={onUpload}
-            className="rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-black text-white hover:bg-slate-800"
+            className="rounded-lg bg-brand-dark px-5 py-2.5 text-sm font-black text-white hover:bg-slate-800"
             type="button"
           >
-            {lang === 'mn' ? 'CV upload хийх' : 'Upload a CV'}
+            {t('uploadCvBtn', lang)}
           </button>
         </div>
       ) : (
@@ -1948,11 +1994,11 @@ function HistoryView({lang, records, historyLoading, onLoad, onUpload}: {
           {records.map((record) => (
             <div key={record.id} className="flex flex-col gap-4 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-4">
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-brand-dark text-white">
                   <FileText size={22} />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-slate-950">{record.fileName}</p>
+                  <p className="truncate text-sm font-black text-brand-dark">{record.fileName}</p>
                   <p className="mt-0.5 text-xs font-medium text-slate-500">
                     {record.fileType.toUpperCase()} &nbsp;·&nbsp; {record.uploadedAt}
                   </p>
@@ -1966,7 +2012,7 @@ function HistoryView({lang, records, historyLoading, onLoad, onUpload}: {
                       style={{width: `${record.overall}%`}}
                     />
                   </div>
-                  <span className="min-w-[3rem] rounded-md bg-slate-950 px-2.5 py-1 text-center text-xs font-black text-white">
+                  <span className="min-w-[3rem] rounded-md bg-brand-dark px-2.5 py-1 text-center text-xs font-black text-white">
                     {record.overall}/100
                   </span>
                 </div>
@@ -1974,13 +2020,13 @@ function HistoryView({lang, records, historyLoading, onLoad, onUpload}: {
                 <button
                   onClick={() => onLoad(record.id)}
                   disabled={historyLoading === record.id}
-                  className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 hover:bg-brand-bg disabled:opacity-50"
                   type="button"
                 >
                   {historyLoading === record.id
                     ? <Loader2 size={14} className="animate-spin" />
                     : <BarChart3 size={14} />}
-                  {lang === 'mn' ? 'Харах' : 'View'}
+                  {t('viewBtn', lang)}
                 </button>
               </div>
             </div>
@@ -1997,11 +2043,11 @@ function Panel({title, subtitle, icon: Icon, children}: {title: string; subtitle
   return (
     <section className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="mb-5 flex items-start gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-white">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-dark text-white">
           <Icon size={20} />
         </div>
         <div>
-          <h2 className="text-lg font-black text-slate-950">{title}</h2>
+          <h2 className="text-lg font-black text-brand-dark">{title}</h2>
           {subtitle && <p className="mt-1 text-sm leading-6 text-slate-500">{subtitle}</p>}
         </div>
       </div>
@@ -2016,7 +2062,7 @@ function ScoreCard({icon: Icon, label, value, helper}: {icon: LucideIcon; label:
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-xs font-black uppercase text-slate-500">{label}</p>
-          <p className="mt-2 text-3xl font-black text-slate-950">{value}</p>
+          <p className="mt-2 text-3xl font-black text-brand-dark">{value}</p>
         </div>
         <div className="flex size-11 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
           <Icon size={22} />
@@ -2037,7 +2083,7 @@ function Checklist({title, items, positive}: {title?: string; items: string[]; p
       {title && <p className="mb-3 text-xs font-black uppercase text-slate-500">{title}</p>}
       <div className="space-y-2">
         {items.map((item) => (
-          <div key={item} className="flex gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div key={item} className="flex gap-3 rounded-lg border border-slate-200 bg-brand-bg p-3">
             {positive ? <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-600" size={18} /> : <AlertTriangle className="mt-0.5 shrink-0 text-amber-600" size={18} />}
             <p className="text-sm leading-6 text-slate-700">{item}</p>
           </div>
@@ -2076,18 +2122,18 @@ function FeedbackCard({
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black uppercase text-slate-600">
+        <span className="rounded-md border border-slate-200 bg-brand-bg px-3 py-1 text-xs font-black uppercase text-brand-mid">
           {feedbackTypeLabel(item.type, lang)}
         </span>
         <span className={`rounded-md border px-3 py-1 text-xs font-black uppercase ${severityClass(item.severity)}`}>{severityLabel(item.severity, lang)}</span>
       </div>
       <div className="mt-5 space-y-4">
         <div>
-          <p className="text-[10px] font-black uppercase text-slate-500">{lang === 'mn' ? 'Өмнөх' : 'Before'}</p>
+          <p className="text-[10px] font-black uppercase text-slate-500">{t('beforeLabel', lang)}</p>
           <p className="mt-2 rounded-lg bg-rose-50 p-4 text-sm leading-6 text-rose-800">{item.original}</p>
         </div>
         <div>
-          <p className="text-[10px] font-black uppercase text-slate-500">{lang === 'mn' ? 'Сайжруулсан' : 'After'}</p>
+          <p className="text-[10px] font-black uppercase text-slate-500">{t('afterLabel', lang)}</p>
           <p className="mt-2 rounded-lg bg-emerald-50 p-4 text-sm leading-6 text-emerald-800">{item.suggestion}</p>
         </div>
         {showNote ? <p className="text-xs leading-5 text-slate-500">{item.explanation}</p> : null}
@@ -2117,57 +2163,45 @@ function ProfileDropdown({user, lang, profileImage, onLogout, onNavigate}: {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const menuItems: Array<{label: string; labelMn: string; icon: typeof User; view?: ActiveView}> = [
-    {label: 'Profile', labelMn: 'Профайл', icon: User, view: 'overview'},
-    {label: 'Settings', labelMn: 'Тохиргоо', icon: Settings},
-    {label: 'My CVs', labelMn: 'Миний CV-үүд', icon: FileText, view: 'history' as ActiveView},
-    {label: 'Saved Jobs', labelMn: 'Хадгалсан ажлууд', icon: BookmarkCheck},
+  const menuItems: Array<{labelKey: Parameters<typeof t>[0]; icon: typeof User; view?: ActiveView}> = [
+    {labelKey: 'profileMenuItem', icon: User, view: 'overview'},
+    {labelKey: 'settingsMenuItem', icon: Settings},
+    {labelKey: 'myCvsMenuItem', icon: FileText, view: 'history' as ActiveView},
+    {labelKey: 'savedJobsMenuItem', icon: BookmarkCheck},
   ];
 
   return (
     <div ref={ref} className="relative shrink-0">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm transition-colors hover:bg-slate-50 focus:outline-none"
+        className="flex size-9 items-center justify-center rounded-full border border-white/20 text-white/70 transition-colors hover:bg-white/10 hover:text-white focus:outline-none"
         type="button"
         aria-expanded={open}
         aria-haspopup="true"
+        title={user.fullName}
       >
-        {profileImage ? (
-          <img src={profileImage} alt="Avatar" className="size-8 rounded-full object-cover" />
-        ) : (
-          <div className="flex size-8 items-center justify-center rounded-full bg-slate-950 text-sm font-black text-white">
-            {user.fullName.charAt(0).toUpperCase()}
-          </div>
-        )}
-        <span className="hidden max-w-30 truncate text-sm font-bold text-slate-700 sm:block">
-          {user.fullName}
-        </span>
-        <ChevronDown
-          size={14}
-          className={`text-slate-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-        />
+        <UserRound size={18} />
       </button>
 
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
           {/* User info header */}
           <div className="border-b border-slate-100 px-4 py-3">
-            <p className="truncate text-sm font-black text-slate-950">{user.fullName}</p>
+            <p className="truncate text-sm font-black text-brand-dark">{user.fullName}</p>
             <p className="truncate text-xs text-slate-500">{user.email}</p>
           </div>
 
           {/* Menu items */}
           <div className="py-1">
-            {menuItems.map(({label, labelMn, icon: Icon, view}) => (
+            {menuItems.map(({labelKey, icon: Icon, view}) => (
               <button
-                key={label}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition-colors hover:bg-slate-50"
+                key={labelKey}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition-colors hover:bg-brand-bg"
                 onClick={() => { setOpen(false); if (view) onNavigate(view); }}
                 type="button"
               >
                 <Icon size={16} className="shrink-0 text-slate-400" />
-                {lang === 'mn' ? labelMn : label}
+                {t(labelKey, lang)}
               </button>
             ))}
           </div>
@@ -2180,7 +2214,7 @@ function ProfileDropdown({user, lang, profileImage, onLogout, onNavigate}: {
               type="button"
             >
               <LogOut size={16} className="shrink-0" />
-              {lang === 'mn' ? 'Гарах' : 'Log out'}
+              {t('logoutMenuItem', lang)}
             </button>
           </div>
         </div>
@@ -2205,12 +2239,12 @@ function QuestionPanel({title, icon, items, lang}: {title: string; icon: LucideI
   return (
     <Panel title={title} icon={icon}>
       {items.length === 0 ? (
-        <p className="text-sm text-slate-500">{lang === 'mn' ? 'CV шинжилгээний дараа асуултууд гарна.' : 'Questions will appear after CV analysis.'}</p>
+        <p className="text-sm text-slate-500">{t('noQuestions', lang)}</p>
       ) : (
         <div className="space-y-2">
           {items.map((item, i) => (
-            <div key={item} className="flex gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-sm font-black text-white">{i + 1}</div>
+            <div key={item} className="flex gap-4 rounded-lg border border-slate-200 bg-brand-bg p-4">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-dark text-sm font-black text-white">{i + 1}</div>
               <p className="whitespace-pre-line text-sm leading-6 text-slate-700">{item}</p>
             </div>
           ))}

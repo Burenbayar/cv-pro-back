@@ -1,5 +1,6 @@
 import {enrichParsedCv, parseCvSections, type CvLanguage} from '@shared/cvSections';
 import {CvTemplateDocument, type CvTemplateData} from './CvTemplateDocument';
+import {t} from '../i18n';
 
 type ExportPdfPreviewProps = {
   analysis: CvTemplateData;
@@ -11,10 +12,8 @@ type ExportPdfPreviewProps = {
 
 export function ExportPdfPreview({analysis, profileImage, lang, size = 'sm', showIntro = false}: ExportPdfPreviewProps) {
   const compact = size === 'sm';
-  const intro =
-    lang === 'mn' ? 'Таны CV-г ингэж сайжрууллаа' : 'Your CV has been improved to look like this';
-  const empty =
-    lang === 'mn' ? 'Эхлээд CV шинжилгээ хийж сайжруулсан агуулга аваарай.' : 'Run analysis first.';
+  const intro = t('exportPreviewIntro', lang);
+  const empty = t('exportPreviewEmpty', lang);
 
   const rawSource = (analysis.sourceCvText || analysis.rewrittenCv).trim();
   const enrichCtx = {

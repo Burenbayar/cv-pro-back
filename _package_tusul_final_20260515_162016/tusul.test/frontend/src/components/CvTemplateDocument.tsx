@@ -9,6 +9,7 @@ import {
   splitExperienceBlocks,
   templateLabels,
 } from '@shared/cvTemplateTheme';
+import {t as tr} from '../i18n';
 
 export type CvTemplateData = {
   candidateName: string;
@@ -36,8 +37,8 @@ export function CvTemplateDocument({data, profileImage, lang, compact = false}: 
       candidateName: data.candidateName,
       cvText: normalizedRaw || normalizedCv,
       fullName: data.accountFullName || data.candidateName,
-    }) || (lang === 'mn' ? 'Нэр' : 'Name');
-  const role = data.targetRole.trim() || (lang === 'mn' ? 'Мэргэжил' : 'Professional');
+    }) || tr('previewNameFallback', lang);
+  const role = data.targetRole.trim() || tr('templateRoleFallback', lang);
   const enrichCtx = {language: lang, targetRole: role, displayName: name, experienceLevel: ''};
   const enriched = enrichParsedCv(parseCvSections(normalizedCv), normalizedRaw, data.skills, enrichCtx);
   const parsed = sanitizeParsedForTemplate(enriched, normalizedRaw, data.skills, enrichCtx);

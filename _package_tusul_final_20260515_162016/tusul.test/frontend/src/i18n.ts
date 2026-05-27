@@ -7,17 +7,17 @@ const T = {
 
   // Navigation
   navOverview:  { mn: 'Нүүр',       en: 'Overview' },
-  navUpload:    { mn: 'CV Upload',  en: 'CV Upload' },
+  navUpload:    { mn: 'CV оруулах',  en: 'CV Upload' },
   navAnalysis:  { mn: 'Шинжилгээ', en: 'Analysis' },
-  navRewrite:   { mn: 'Rewrite',   en: 'Rewrite' },
-  navInterview: { mn: 'Interview', en: 'Interview' },
+  navRewrite:   { mn: 'Дахин бичих',   en: 'Rewrite' },
+  navInterview: { mn: 'Ярилцлага', en: 'Interview' },
   navCareer:    { mn: 'Карьер',    en: 'Career' },
-  navExport:    { mn: 'Export',    en: 'Export' },
+  navExport:    { mn: 'Татах',    en: 'Export' },
   navHistory:   { mn: 'Түүх',      en: 'History' },
 
   // Auth
   loginTitle:    { mn: 'Тавтай морил',                                en: 'Welcome back' },
-  loginDesc:     { mn: 'CV шинжилгээний dashboard руу нэвтрэнэ үү.', en: 'Sign in to access your CV analysis dashboard.' },
+  loginDesc:     { mn: 'CV шинжилгээний хяналтын самбар руу нэвтрэнэ үү.', en: 'Sign in to access your CV analysis dashboard.' },
   registerTitle: { mn: 'Бүртгэл үүсгэх',                             en: 'Create your account' },
   registerDesc:  { mn: 'AI-д суурилсан CV шинжилгээгээр карьераа хөгжүүл.', en: 'Start improving your CV with AI-powered analysis.' },
   login:         { mn: 'Нэвтрэх',    en: 'Log in' },
@@ -31,66 +31,44 @@ const T = {
   authError:     { mn: 'И-мэйл эсвэл нууц үг буруу байна.', en: 'Incorrect email or password.' },
 
   // Main header
-  welcome:     { mn: 'CV performance dashboard', en: 'CV performance dashboard' },
+  welcome:     { mn: 'CV гүйцэтгэлийн самбар', en: 'CV performance dashboard' },
   welcomeDesc: {
-    mn: 'CV upload, ATS оноо, rewrite suggestion, interview бэлтгэл, career roadmap, export flow бүгд нэг дор.',
+    mn: 'CV оруулах, ATS оноо шалгах, дахин бичих санал, ярилцлагын бэлтгэл, карьерын төлөвлөгөө болон татах үйлдэл бүгд нэг дор.',
     en: 'Upload a CV, check ATS fit, review rewrite suggestions, prepare for interviews, plan a career path and export an optimized draft.',
   },
   statOverall: { mn: 'Нийт оноо', en: 'Overall' },
-  statRewrite: { mn: 'Rewrite',   en: 'Rewrite' },
+  statRewrite: { mn: 'Дахин бичих',   en: 'Rewrite' },
   statStatus:  { mn: 'Төлөв',    en: 'Status' },
-
-  // Sidebar privacy / security
-  privacyTitle: { mn: 'Нууцлалын хамгаалалт', en: 'Privacy guard' },
-  privacyDesc: {
-    mn: 'CV personal data, raw CV text, AI prompt/output console log хийхгүй байх зарчимтай.',
-    en: 'No CV personal data, raw text, AI prompt or output should be logged.',
-  },
-  securityTitle: { mn: 'Аюулгүй байдлын шалгуур', en: 'Security checklist' },
-  securityItems: {
-    mn: [
-      'OpenAI API key frontend дээр байхгүй',
-      'Prompt injection guardrail server prompt-д байна',
-      'Sensitive CV data console log хийхгүй',
-      'JWT токен нь LocalStorage-д хадгалагдана',
-    ],
-    en: [
-      'OpenAI API key is not exposed on frontend',
-      'Prompt injection guardrails in server prompt',
-      'Sensitive CV data is not console logged',
-      'JWT token stored in localStorage',
-    ],
-  },
 
   // Overview
   overallScoreLabel: { mn: 'Нийт оноо',    en: 'Overall Score' },
   overallHelper:     { mn: '5 метрикийн дундаж', en: '5 metric average' },
-  atsHelper:         { mn: 'Keyword & бүтэц',     en: 'Keyword & structure' },
+  atsHelper:         { mn: 'Түлхүүр үг ба бүтэц',     en: 'Keyword & structure' },
   grammarLabel:      { mn: 'Хэлний алдаа',        en: 'Grammar' },
-  grammarHelper:     { mn: 'Tone & алдаа',         en: 'Tone & spelling' },
-  skillsMatchLabel:  { mn: 'Skill тохирол',        en: 'Skills Match' },
+  grammarHelper:     { mn: 'Өнгө аяс ба бичгийн алдаа',         en: 'Tone & spelling' },
+  skillsMatchLabel:  { mn: 'Ур чадварын тохирол',        en: 'Skills Match' },
   skillsMatchHelper: { mn: 'Зорилтот ажилд тохирол', en: 'Target role fit' },
   recentCvs:         { mn: 'Сүүлийн CV файлууд',  en: 'Recent CVs' },
-  noCvs:             { mn: 'Одоохондоо CV байхгүй байна. Upload хийнэ үү.', en: 'No CVs yet. Upload one to get started.' },
-  aiFeedbackTitle:   { mn: 'AI feedback хураангуй', en: 'AI feedback summary' },
-  aiFeedbackEmpty:   { mn: 'CV upload хийснийхээ дараа шинжилгээ гарна.', en: 'Analysis will appear after you upload a CV.' },
+  noCvs:             { mn: 'Одоогоор CV байхгүй байна. Эхлээд нэг CV оруулна уу.', en: 'No CVs yet. Upload one to get started.' },
+  aiFeedbackTitle:   { mn: 'AI саналын хураангуй', en: 'AI feedback summary' },
+  aiFeedbackEmpty:   { mn: 'CV оруулсны дараа шинжилгээ гарна.', en: 'Analysis will appear after you upload a CV.' },
   strengthsLabel:    { mn: 'Давуу тал',       en: 'Strengths' },
   areasLabel:        { mn: 'Сайжруулах хэсэг', en: 'Areas to improve' },
   quickActions:      { mn: 'Хурдан үйлдлүүд', en: 'Quick Actions' },
-  uploadNewCv:       { mn: 'Шинэ CV upload хийх', en: 'Upload new CV' },
-  reviewRewrites:    { mn: 'Rewrite санал харах',  en: 'Review rewrites' },
-  prepareInterview:  { mn: 'Interview бэлтгэх',    en: 'Prepare interview' },
-  downloadExport:    { mn: 'Export татах',          en: 'Download export' },
+  uploadNewCv:       { mn: 'Шинэ CV оруулах', en: 'Upload new CV' },
+  reviewRewrites:    { mn: 'Дахин бичих саналууд харах',  en: 'Review rewrites' },
+  prepareInterview:  { mn: 'Ярилцлагад бэлтгэх',    en: 'Prepare interview' },
+  downloadExport:    { mn: 'Бэлэн CV татах',          en: 'Download export' },
 
   // Upload view
-  uploadTitle:       { mn: 'CV upload болон шинжилгээ',       en: 'CV upload and analysis' },
-  uploadDesc:        { mn: 'PDF файл 10MB хүртэл. CV текстийг зөвхөн шинжилгээний input гэж үзнэ.', en: 'PDF up to 10MB. CV text is treated only as untrusted analysis input.' },
+  uploadTitle:       { mn: 'CV оруулах болон шинжилгээ',       en: 'CV upload and analysis' },
+  uploadDesc:        { mn: 'PDF файл 10MB хүртэл. CV текстийг зөвхөн шинжилгээний оролт гэж үзнэ.', en: 'PDF up to 10MB. CV text is treated only as untrusted analysis input.' },
   chooseFile:        { mn: 'Файл сонгох',  en: 'Choose file' },
   dropFile:          { mn: 'Файлаа энд чирж оруулах эсвэл сонгох', en: 'Drop or choose your file' },
-  rawTextLabel:      { mn: 'CV-ийн текст', en: 'Extracted or pasted CV text' },
+  rawTextLabel:      { mn: 'CV-ийн уншигдсан эсвэл хуулсан текст', en: 'Extracted or pasted CV text' },
   jobDescLabel:      { mn: 'Зорилтот ажлын байрны тайлбар', en: 'Target job description' },
   analyze:           { mn: 'Шинжилгээ эхлүүлэх', en: 'Start analysis' },
-  profilePhotoLabel: { mn: 'Профайл зураг (заавал биш — PDF-д харагдана)', en: 'Profile photo (optional — appears in exported PDF)' },
+  profilePhotoLabel: { mn: 'CV цээж зураг (заавал биш)', en: 'CV headshot (optional)' },
   choosePhoto:       { mn: 'Зураг сонгох', en: 'Choose photo' },
   removePhoto:       { mn: 'Арилгах',      en: 'Remove' },
   pasteCvPlaceholder:  { mn: 'CV текстийг энд буулгана уу...',                    en: 'Paste CV text here...' },
@@ -101,29 +79,33 @@ const T = {
   stepUploadedDesc:   { mn: 'Файл шалгах, хэмжээ/төрөл баталгаажуулах',        en: 'File validation, size/type check' },
   stepParsingDesc:    { mn: 'Текст болон бүтэцтэй JSON гаргах',                  en: 'Raw text + structured JSON extraction' },
   stepAnalyzingDesc:  { mn: 'AI шинжилгээ болон schema баталгаажуулалт',        en: 'Stage-based AI scoring + schema validation' },
-  stepCompletedDesc:  { mn: 'Dashboard, rewrite, interview, export бэлэн',      en: 'Dashboard, rewrite, interview, export ready' },
+  stepCompletedDesc:  { mn: 'Самбар, дахин бичих санал, ярилцлага, татах хэсэг бэлэн',      en: 'Dashboard, rewrite, interview, export ready' },
 
   // CvStatus labels
-  statusUploaded:  { mn: 'Upload хийгдсэн',          en: 'Uploaded' },
+  statusUploaded:  { mn: 'Оруулсан',          en: 'Uploaded' },
   statusParsing:   { mn: 'CV уншиж байна',            en: 'Parsing CV' },
   statusAnalyzing: { mn: 'AI шинжилгээ хийж байна', en: 'Analyzing' },
   statusCompleted: { mn: 'Дууссан',                  en: 'Completed' },
   statusFailed:    { mn: 'Алдаа гарсан',             en: 'Failed' },
 
   // Validation messages
-  onlyPdf:       { mn: 'Зөвхөн PDF файл upload хийнэ үү.',       en: 'Only PDF files are allowed.' },
+  onlyPdf:       { mn: 'Зөвхөн PDF файл оруулна уу.',       en: 'Only PDF files are allowed.' },
   emptyFile:     { mn: 'Хоосон файл байна.',                      en: 'The selected file is empty.' },
   fileTooLarge:  { mn: 'Файлын хэмжээ 10MB-аас их байна.',        en: 'File size must be under 10MB.' },
   cvRequired:    { mn: 'CV файл эсвэл CV текст оруулна уу.',      en: 'Upload a CV file or paste CV text.' },
   loginRequired: { mn: 'Шинжилгээ хийхийн тулд эхлээд нэвтэрнэ үү.', en: 'Please log in to analyze your CV.' },
   sessionExpired: { mn: 'Нэвтрэлт хүчинтэй биш. Дахин нэвтэрнэ үү.', en: 'Session expired. Please log in again.' },
   serverError:   { mn: 'Серверт холбогдож чадсангүй.',            en: 'Could not connect to server.' },
+  cvTextLoaded:  { mn: 'CV текст уншлаа ({count} тэмдэгт).', en: 'CV text loaded ({count} chars).' },
+  analysisReadySummary: { mn: 'Таны CV ({count} тэмдэгт) шинжлэгдэж, шинэ CV бэлэн боллоо.', en: 'Your CV was analyzed ({count} chars). New CV is ready.' },
+  analysisMissingCv: { mn: 'Шинэ CV үүсээгүй. PDF-ийн текстийг хуулж оруулаад дахин оролдоно уу.', en: 'No new CV generated. Paste CV text and try again.' },
 
   // Analysis view
   aiAnalysisTag:     { mn: 'AI ШИНЖИЛГЭЭ',              en: 'AI ANALYSIS' },
   cvAnalysisTitle:   { mn: 'CV Анализ',                  en: 'CV Analysis' },
   cvAnalysisSubtitle:{ mn: 'AI тусламжтайгаар CV загварыг сайжруул', en: 'Improve your CV with AI assistance' },
   standardMatch:     { mn: 'Стандарт CV тохирол',        en: 'Standard CV match' },
+  standardMatchValue:{ mn: 'Стандарт CV тохирол: {value}%', en: 'Standard CV match: {value}%' },
   cvAnalysisComplete:{ mn: 'CV шинжилгээ хийгдлээ.',     en: 'CV analysis complete.' },
   missingSections:   { mn: 'Дутуу хэсгүүд',              en: 'Missing sections' },
   analysisStrengths: { mn: 'Давуу талууд',               en: 'Strengths' },
@@ -145,13 +127,17 @@ const T = {
   secSkills:     { mn: 'Ур чадвар',       en: 'Skills' },
 
   // Rewrite view
-  aiRewriteTitle:  { mn: 'AI rewrite саналууд',  en: 'AI rewrite suggestions' },
-  uploadFirstMsg:  { mn: 'Эхлээд CV upload хийж шинжилгээ хийлгэнэ үү.', en: 'Upload and analyze a CV first.' },
+  aiRewriteTitle:  { mn: 'AI дахин бичих саналууд',  en: 'AI rewrite suggestions' },
+  uploadFirstMsg:  { mn: 'Эхлээд CV оруулж шинжилгээ хийлгэнэ үү.', en: 'Upload and analyze a CV first.' },
   acceptedBtn:     { mn: 'Батлагдсан', en: 'Accepted' },
   acceptBtn:       { mn: 'Батлах',     en: 'Accept' },
   regenBtn:        { mn: 'Дахин',      en: 'Regen' },
   rejectBtn:       { mn: 'Татгалзах',  en: 'Reject' },
   downloadCvBtn:   { mn: 'CV татаж авах', en: 'Download CV' },
+  fallbackFeedbackOriginal: { mn: 'CV-ийн энэ хэсгийг сайжруулах шаардлагатай', en: 'CV section needs improvement' },
+  fallbackFeedbackExplanation: { mn: 'ATS болон ажил олгогчид уншихад илүү ойлгомжтой болгоно.', en: 'Improves ATS alignment and recruiter readability.' },
+  fallbackCareerDuration: { mn: '3-6 сар', en: '3-6 months' },
+  suggestionQuantifyAppend: { mn: 'Мөн үр дүнг тоон үзүүлэлтээр тодруулж, зорилтот ажлын байрны түлхүүр үгстэй уялдуулах боломжтой.', en: 'Also quantify results and align with target role keywords.' },
 
   // Interview view
   technicalTitle:  { mn: 'Техникийн асуулт',    en: 'Technical' },
@@ -164,11 +150,11 @@ const T = {
   currentLevelLabel:   { mn: 'Одоогийн түвшин',       en: 'Current level' },
   estimatedDuration:   { mn: 'Тооцоолсон хугацаа',   en: 'Estimated duration' },
   recommendedRoles:    { mn: 'Санал болгох ажлын байр', en: 'Recommended roles' },
-  missingSkillsTitle:  { mn: 'Дутуу skill',            en: 'Missing skills' },
-  roadmapTitle:        { mn: '3-6 сарын roadmap',      en: '3-6 month roadmap' },
+  missingSkillsTitle:  { mn: 'Дутуу ур чадвар',            en: 'Missing skills' },
+  roadmapTitle:        { mn: '3-6 сарын төлөвлөгөө',      en: '3-6 month roadmap' },
 
   // Export view
-  previewPanelTitle:   { mn: 'Урьдчилан харах (Preview)', en: 'Preview' },
+  previewPanelTitle:   { mn: 'Урьдчилан харах', en: 'Preview' },
   previewRoleLabel:    { mn: 'Мэргэжил',                  en: 'Role' },
   previewSkillsLabel:  { mn: 'Ур чадвар',                 en: 'Skills' },
   previewNameFallback: { mn: 'Нэр',                       en: 'Name' },
@@ -179,19 +165,29 @@ const T = {
   previewNote:            { mn: 'Энэ бол PDF-ийн хялбаршуулсан урьдчилан харалт юм.', en: 'This is a simplified preview of the exported PDF.' },
   downloadPdfBtn:         { mn: 'PDF татаж авах',          en: 'Download PDF' },
   pdfNote: {
-    mn: 'PDF нь professional хоёр баганат загвараар үүснэ. Профайл зураг оруулсан бол PDF-д харагдана.',
+    mn: 'PDF нь мэргэжлийн хоёр баганат загвараар үүснэ. Профайл зураг оруулсан бол PDF-д харагдана.',
     en: 'PDF is generated as a professional two-column layout. Your profile photo will appear if uploaded.',
   },
+  exportPreviewIntro: { mn: 'Таны CV-г ингэж сайжрууллаа', en: 'Your CV has been improved to look like this' },
+  exportPreviewEmpty: { mn: 'Эхлээд CV шинжилгээ хийж сайжруулсан агуулга аваарай.', en: 'Run analysis first.' },
+  cvPreviewModalTitle: { mn: 'CV урьдчилан харах', en: 'CV preview' },
+  templateRoleFallback: { mn: 'Мэргэжил', en: 'Professional' },
 
   // History view
   historyPanelTitle: { mn: 'CV шинжилгээний түүх', en: 'CV Analysis History' },
   noHistoryMsg:      { mn: 'Одоохондоо CV шинжилгээний түүх байхгүй байна.', en: 'No CV analysis history yet.' },
-  uploadCvBtn:       { mn: 'CV upload хийх', en: 'Upload a CV' },
+  uploadCvBtn:       { mn: 'CV оруулах', en: 'Upload a CV' },
   viewBtn:           { mn: 'Харах',          en: 'View' },
 
   // Feedback card
   beforeLabel: { mn: 'Өмнөх',       en: 'Before' },
   afterLabel:  { mn: 'Сайжруулсан', en: 'After' },
+  improvedToLabel: { mn: 'Ингэж сайжрууллаа', en: 'Improved to' },
+  changesTitle: { mn: 'Юу өөрчлөгдсөн бэ?', en: 'What changed?' },
+  changesIntro: { mn: 'Таны CV-д доорх сайжруулалтуудыг хийлээ. Эдгээр нь ATS болон ажил олгогчид илүү ойлгомжтой харагдахад тусална.', en: 'We applied the improvements below so recruiters and ATS systems can read your CV more clearly.' },
+  highlightedKeywords: { mn: 'Нэмсэн / онцолсон түлхүүр үг', en: 'Highlighted keywords' },
+  strengthsEmphasized: { mn: 'Тодотгосон давуу тал', en: 'Strengths emphasized' },
+  noAcceptedSuggestions: { mn: 'Дахин бичих хэсэгт санал батлагдаагүй байна. Гэхдээ доорх CV аль хэдийн бүтэцлэгдсэн байна.', en: 'No suggestions were accepted in Rewrite yet. Your structured CV is still ready below.' },
 
   // Profile dropdown
   profileMenuItem:   { mn: 'Профайл',            en: 'Profile' },
@@ -200,14 +196,22 @@ const T = {
   savedJobsMenuItem: { mn: 'Хадгалсан ажлууд',   en: 'Saved Jobs' },
   logoutMenuItem:    { mn: 'Гарах',               en: 'Log out' },
   closeLabel:        { mn: 'Хаах',                en: 'Close' },
+  profileImageAlt:   { mn: 'Профайл зураг',        en: 'Profile photo' },
+  profilePreviewAlt: { mn: 'Профайл зургийн урьдчилсан харагдац', en: 'Profile photo preview' },
+  avatarAlt:         { mn: 'Хэрэглэгчийн зураг',   en: 'Avatar' },
+  switchToEnglish:   { mn: 'Англи',                en: 'English' },
+  switchToMongolian: { mn: 'Монгол',               en: 'Mongolian' },
 
   // Toast messages
   analysisLoaded:    { mn: 'Шинжилгээ ачааллагдлаа.',        en: 'Analysis loaded.' },
   loadFailed:        { mn: 'Ачааллахад алдаа гарлаа.',       en: 'Failed to load analysis.' },
-  allAcceptedToast:  { mn: 'Бүх санал батлагдлаа. Export хэсэг рүү шилжиж байна…', en: 'All suggestions accepted. Opening export…' },
+  languageRefreshing: { mn: 'Сонгосон хэлээр шинжилгээг шинэчилж байна...', en: 'Refreshing analysis in the selected language...' },
+  languageRefreshed: { mn: 'Шинжилгээ сонгосон хэлээр шинэчлэгдлээ.', en: 'Analysis refreshed in the selected language.' },
+  languageRefreshFailed: { mn: 'Шинжилгээг сонгосон хэлээр шинэчилж чадсангүй.', en: 'Could not refresh analysis in the selected language.' },
+  allAcceptedToast:  { mn: 'Бүх санал батлагдлаа. Татах хэсэг рүү шилжиж байна...', en: 'All suggestions accepted. Opening export...' },
   suggestionAccepted:  { mn: 'Санал батлагдлаа.',            en: 'Suggestion accepted.' },
   suggestionRejected:  { mn: 'Санал татгалзагдлаа.',         en: 'Suggestion rejected.' },
-  suggestionRegenned:  { mn: 'AI suggestion дахин үүсгэлээ.', en: 'Suggestion regenerated.' },
+  suggestionRegenned:  { mn: 'AI санал дахин үүсгэлээ.', en: 'Suggestion regenerated.' },
   noImprovedCv:        { mn: 'Татах сайжруулсан CV одоогоор алга байна.', en: 'No improved CV is available to download yet.' },
 
   // Feedback type labels
@@ -225,9 +229,8 @@ export function t(key: TKey, lang: Language): string {
   return key;
 }
 
-/** Returns a translated string array (for keys whose value is {mn: string[], en: string[]}). */
-export function tArr(key: 'securityItems', lang: Language): readonly string[] {
-  return T[key][lang];
+export function tf(key: TKey, lang: Language, values: Record<string, string | number>): string {
+  return t(key, lang).replace(/\{(\w+)\}/g, (_, name: string) => String(values[name] ?? ''));
 }
 
 /** Persist and read language preference from localStorage. */

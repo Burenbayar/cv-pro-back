@@ -2,6 +2,7 @@ import {useEffect} from 'react';
 import {X, ZoomIn} from 'lucide-react';
 import {CvTemplateDocument} from './CvTemplateDocument';
 import type {CvLanguage} from '@shared/cvSections';
+import {t} from '../i18n';
 
 type CvPreviewModalProps = {
   open: boolean;
@@ -33,11 +34,11 @@ export function CvPreviewModal({open, onClose, lang, analysis, profileImage}: Cv
 
   if (!open) return null;
 
-  const title = lang === 'mn' ? 'CV урьдчилан харах' : 'CV preview';
+  const title = t('cvPreviewModalTitle', lang);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={title}>
-      <button type="button" className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm" onClick={onClose} aria-label={lang === 'mn' ? 'Хаах' : 'Close'} />
+      <button type="button" className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm" onClick={onClose} aria-label={t('closeLabel', lang)} />
       <div className="relative z-10 flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3">
           <p className="flex items-center gap-2 text-sm font-black text-slate-900">
@@ -48,7 +49,7 @@ export function CvPreviewModal({open, onClose, lang, analysis, profileImage}: Cv
             type="button"
             onClick={onClose}
             className="flex size-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-            aria-label={lang === 'mn' ? 'Хаах' : 'Close'}
+            aria-label={t('closeLabel', lang)}
           >
             <X size={18} />
           </button>

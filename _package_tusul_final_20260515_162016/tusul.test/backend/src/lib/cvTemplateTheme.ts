@@ -1,14 +1,14 @@
 import type {CvLanguage} from './cvSections';
 
 export const CV_THEME = {
-  navy: '#1a365d',
-  navyLight: '#1e40af',
-  sidebar: '#eef2f6',
-  line: '#cbd5e1',
-  body: '#1e293b',
-  muted: '#475569',
-  accent: '#2563eb',
-  white: '#ffffff',
+  navy:      '#333E5B',
+  navyLight: '#495883',
+  sidebar:   '#F1EDEE',
+  line:      '#c8c2c4',
+  body:      '#333E5B',
+  muted:     '#495883',
+  accent:    '#495883',
+  white:     '#ffffff',
 } as const;
 
 export function templateLabels(lang: CvLanguage) {
