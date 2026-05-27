@@ -1,5 +1,4 @@
 import express from 'express';
-import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -1018,6 +1017,7 @@ async function startServer() {
     const frontendDist = path.join(frontendRoot, 'dist');
     const indexHtml = path.join(frontendRoot, 'index.html');
     if (process.env.NODE_ENV !== 'production') {
+        const { createServer: createViteServer } = await import('vite');
         const vite = await createViteServer({
             root: frontendRoot,
             configFile: path.join(frontendRoot, 'vite.config.ts'),
