@@ -1012,11 +1012,19 @@ app.use('/api', (req, _res, next) => {
 function isApiRequest(url) {
     return url.startsWith('/api');
 }
+/** Vite only when explicitly in local dev (Render often has no NODE_ENV → must not load vite). */
+function isViteDevServerEnabled() {
+    if (process.env.NODE_ENV === 'production')
+        return false;
+    if (process.env.USE_VITE_DEV === 'true')
+        return true;
+    return process.env.NODE_ENV === 'development';
+}
 async function startServer() {
     const frontendRoot = path.join(backendRoot, '..', 'frontend');
     const frontendDist = path.join(frontendRoot, 'dist');
     const indexHtml = path.join(frontendRoot, 'index.html');
-    if (process.env.NODE_ENV !== 'production') {
+    if (isViteDevServerEnabled()) {
         const { createServer: createViteServer } = await import('vite');
         const vite = await createViteServer({
             root: frontendRoot,
@@ -1064,8 +1072,8 @@ async function startServer() {
     });
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`Server running on http://localhost:${PORT}`);
-        if (process.env.NODE_ENV !== 'production') {
-            console.log(`Frontend + API: http://localhost:${PORT}`);
+        if (isViteDevServerEnabled()) {
+            console.log(`Frontend + API (Vite dev): http://localhost:${PORT}`);
         }
     });
 }
