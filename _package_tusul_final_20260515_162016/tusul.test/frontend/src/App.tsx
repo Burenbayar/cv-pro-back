@@ -1,5 +1,7 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {MutableRefObject, ReactNode} from 'react';
+import {t, tArr, langStorage} from './i18n';
+import type {Language} from './i18n';
 import {
   AlertTriangle,
   ArrowRight,
@@ -43,7 +45,6 @@ import {CvPreviewModal} from './components/CvPreviewModal';
 import {ExportPdfPreview} from './components/ExportPdfPreview';
 import {resolveCandidateName} from '@shared/cvSections';
 
-type Language = 'mn' | 'en';
 type CvStatus = 'uploaded' | 'parsing' | 'analyzing' | 'completed' | 'failed';
 type Severity = 'low' | 'medium' | 'high';
 type ActiveView = 'overview' | 'upload' | 'analysis' | 'rewrite' | 'interview' | 'career' | 'export' | 'history' | 'login' | 'register';
@@ -109,46 +110,46 @@ type AnalysisResult = {
 };
 
 type AppCopy = {
-  appName: string;
-  subtitle: string;
-  welcome: string;
-  welcomeDesc: string;
-  uploadTitle: string;
-  uploadDesc: string;
-  analyze: string;
-  jobDesc: string;
-  rawText: string;
-  export: string;
-  login: string;
-  register: string;
-  logout: string;
-  email: string;
-  password: string;
-  fullName: string;
-  loginTitle: string;
-  loginDesc: string;
-  registerTitle: string;
-  registerDesc: string;
-  noAccount: string;
-  hasAccount: string;
-  authError: string;
-  chooseFile: string;
-  dropFile: string;
+  appName: string; subtitle: string; welcome: string; welcomeDesc: string;
+  uploadTitle: string; uploadDesc: string; analyze: string; jobDesc: string;
+  rawText: string; export: string; login: string; register: string; logout: string;
+  email: string; password: string; fullName: string; loginTitle: string;
+  loginDesc: string; registerTitle: string; registerDesc: string;
+  noAccount: string; hasAccount: string; authError: string;
+  chooseFile: string; dropFile: string;
 };
+
+function getCopy(lang: Language): AppCopy {
+  return {
+    appName:       t('appName', lang),       subtitle:      t('subtitle', lang),
+    welcome:       t('welcome', lang),        welcomeDesc:   t('welcomeDesc', lang),
+    uploadTitle:   t('uploadTitle', lang),    uploadDesc:    t('uploadDesc', lang),
+    analyze:       t('analyze', lang),        jobDesc:       t('jobDescLabel', lang),
+    rawText:       t('rawTextLabel', lang),   export:        t('navExport', lang),
+    login:         t('login', lang),          register:      t('register', lang),
+    logout:        t('logout', lang),         email:         t('email', lang),
+    password:      t('password', lang),       fullName:      t('fullName', lang),
+    loginTitle:    t('loginTitle', lang),     loginDesc:     t('loginDesc', lang),
+    registerTitle: t('registerTitle', lang),  registerDesc:  t('registerDesc', lang),
+    noAccount:     t('noAccount', lang),      hasAccount:    t('hasAccount', lang),
+    authError:     t('authError', lang),      chooseFile:    t('chooseFile', lang),
+    dropFile:      t('dropFile', lang),
+  };
+}
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 const PROTECTED_VIEWS: ActiveView[] = ['overview', 'upload', 'analysis', 'rewrite', 'interview', 'career', 'export', 'history'];
 
-const navigation: Array<{id: ActiveView; labelMn: string; labelEn: string; icon: LucideIcon}> = [
-  {id: 'overview', labelMn: 'Нүүр', labelEn: 'Overview', icon: LayoutDashboard},
-  {id: 'upload', labelMn: 'CV Upload', labelEn: 'CV Upload', icon: UploadCloud},
-  {id: 'analysis', labelMn: 'Шинжилгээ', labelEn: 'Analysis', icon: BarChart3},
-  {id: 'rewrite', labelMn: 'Rewrite', labelEn: 'Rewrite', icon: Sparkles},
-  {id: 'interview', labelMn: 'Interview', labelEn: 'Interview', icon: MessageSquareText},
-  {id: 'career', labelMn: 'Карьер', labelEn: 'Career', icon: Target},
-  {id: 'export', labelMn: 'Export', labelEn: 'Export', icon: Download},
-  {id: 'history', labelMn: 'Түүх', labelEn: 'History', icon: History},
+const navigation: Array<{id: ActiveView; labelKey: Parameters<typeof t>[0]; icon: LucideIcon}> = [
+  {id: 'overview',  labelKey: 'navOverview',  icon: LayoutDashboard},
+  {id: 'upload',    labelKey: 'navUpload',    icon: UploadCloud},
+  {id: 'analysis',  labelKey: 'navAnalysis',  icon: BarChart3},
+  {id: 'rewrite',   labelKey: 'navRewrite',   icon: Sparkles},
+  {id: 'interview', labelKey: 'navInterview', icon: MessageSquareText},
+  {id: 'career',    labelKey: 'navCareer',    icon: Target},
+  {id: 'export',    labelKey: 'navExport',    icon: Download},
+  {id: 'history',   labelKey: 'navHistory',   icon: History},
 ];
 
 const defaultAnalysis: AnalysisResult = {
@@ -157,11 +158,11 @@ const defaultAnalysis: AnalysisResult = {
   rewrittenCv: '',
   sourceCvText: '',
   scores: [
-    {key: 'atsScore', label: 'ATS оноо', value: 0, explanation: '', confidence: 0},
-    {key: 'readability', label: 'Уншигдах байдал', value: 0, explanation: '', confidence: 0},
-    {key: 'skillsMatch', label: 'Skill match', value: 0, explanation: '', confidence: 0},
-    {key: 'experience', label: 'Туршлага', value: 0, explanation: '', confidence: 0},
-    {key: 'grammar', label: 'Grammar', value: 0, explanation: '', confidence: 0},
+    {key: 'atsScore',    label: 'ATS Score',    value: 0, explanation: '', confidence: 0},
+    {key: 'readability', label: 'Readability',   value: 0, explanation: '', confidence: 0},
+    {key: 'skillsMatch', label: 'Skills Match',  value: 0, explanation: '', confidence: 0},
+    {key: 'experience',  label: 'Experience',    value: 0, explanation: '', confidence: 0},
+    {key: 'grammar',     label: 'Grammar',       value: 0, explanation: '', confidence: 0},
   ],
   summary: '',
   strengths: [],
@@ -177,74 +178,12 @@ function calculateOverall(scores: Metric[]) {
   return Math.round(scores.reduce((sum, m) => sum + m.value, 0) / scores.length);
 }
 
-function getCopy(lang: Language): AppCopy {
-  if (lang === 'en') {
-    return {
-      appName: 'CV AI Pro',
-      subtitle: 'AI-powered CV improvement platform',
-      welcome: 'CV performance dashboard',
-      welcomeDesc: 'Upload a CV, check ATS fit, review rewrite suggestions, prepare for interviews, plan a career path and export an optimized draft.',
-      uploadTitle: 'CV upload and analysis',
-      uploadDesc: 'PDF/DOCX up to 10MB. CV text is treated only as untrusted analysis input.',
-      analyze: 'Start analysis',
-      jobDesc: 'Target job description',
-      rawText: 'Extracted or pasted CV text',
-      export: 'Export',
-      login: 'Log in',
-      register: 'Create account',
-      logout: 'Log out',
-      email: 'Email address',
-      password: 'Password',
-      fullName: 'Full name',
-      loginTitle: 'Welcome back',
-      loginDesc: 'Sign in to access your CV analysis dashboard.',
-      registerTitle: 'Create your account',
-      registerDesc: 'Start improving your CV with AI-powered analysis.',
-      noAccount: "Don't have an account?",
-      hasAccount: 'Already have an account?',
-      authError: 'Incorrect email or password.',
-      chooseFile: 'Choose file',
-      dropFile: 'Drop or choose your file',
-    };
-  }
-  return {
-    appName: 'CV AI Pro',
-    subtitle: 'AI-д суурилсан CV сайжруулах систем',
-    welcome: 'CV performance dashboard',
-    welcomeDesc: 'CV upload, ATS оноо, rewrite suggestion, interview бэлтгэл, career roadmap, export flow бүгд нэг дор.',
-    uploadTitle: 'CV upload болон шинжилгээ',
-    uploadDesc: 'PDF/DOCX файл 10MB хүртэл. CV текстийг зөвхөн шинжилгээний input гэж үзнэ.',
-    analyze: 'Шинжилгээ эхлүүлэх',
-    jobDesc: 'Зорилтот ажлын байрны тайлбар',
-    rawText: 'CV-ийн текст',
-    export: 'Export хийх',
-    login: 'Нэвтрэх',
-    register: 'Бүртгүүлэх',
-    logout: 'Гарах',
-    email: 'И-мэйл хаяг',
-    password: 'Нууц үг',
-    fullName: 'Овог нэр',
-    loginTitle: 'Тавтай морил',
-    loginDesc: 'CV шинжилгээний dashboard руу нэвтрэнэ үү.',
-    registerTitle: 'Бүртгэл үүсгэх',
-    registerDesc: 'AI-д суурилсан CV шинжилгээгээр карьераа хөгжүүл.',
-    noAccount: 'Бүртгэл байхгүй юу?',
-    hasAccount: 'Бүртгэлтэй юу?',
-    authError: 'И-мэйл эсвэл нууц үг буруу байна.',
-    chooseFile: 'Файл сонгох',
-    dropFile: 'Файлаа энд чирж оруулах эсвэл сонгох',
-  };
-}
-
 function getStatusText(status: CvStatus, lang: Language) {
-  const values: Record<CvStatus, {mn: string; en: string}> = {
-    uploaded: {mn: 'Upload хийгдсэн', en: 'Uploaded'},
-    parsing: {mn: 'CV уншиж байна', en: 'Parsing CV'},
-    analyzing: {mn: 'AI шинжилгээ хийж байна', en: 'Analyzing'},
-    completed: {mn: 'Дууссан', en: 'Completed'},
-    failed: {mn: 'Алдаа гарсан', en: 'Failed'},
+  const map: Record<CvStatus, Parameters<typeof t>[0]> = {
+    uploaded: 'statusUploaded', parsing: 'statusParsing',
+    analyzing: 'statusAnalyzing', completed: 'statusCompleted', failed: 'statusFailed',
   };
-  return values[status][lang];
+  return t(map[status], lang);
 }
 
 function severityClass(severity: Severity) {
@@ -254,7 +193,7 @@ function severityClass(severity: Severity) {
 }
 
 function feedbackTypeLabel(type: string, lang: Language) {
-  if (type === 'cv_improvement') return lang === 'mn' ? 'CV сайжруулалт' : 'CV improvement';
+  if (type === 'cv_improvement') return t('cvImprovementType', lang);
   return type.replace(/_/g, ' ');
 }
 
@@ -275,10 +214,9 @@ function severityLabel(severity: Severity, lang: Language) {
   return labels[severity][lang];
 }
 
-function buildFileType(file: File): 'pdf' | 'docx' | null {
+function buildFileType(file: File): 'pdf' | null {
   const name = file.name.toLowerCase();
   if (file.type === 'application/pdf' || name.endsWith('.pdf')) return 'pdf';
-  if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || name.endsWith('.docx')) return 'docx';
   return null;
 }
 
@@ -554,7 +492,7 @@ function buildCvPreviewData(analysis: AnalysisResult, accountFullName?: string) 
 }
 
 export default function App() {
-  const [lang, setLang] = useState<Language>('mn');
+  const [lang, setLang] = useState<Language>(() => langStorage.get());
   const [activeView, setActiveView] = useState<ActiveView>('login');
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string>('');
@@ -593,6 +531,9 @@ export default function App() {
   const overall = useMemo(() => calculateOverall(analysis.scores), [analysis]);
   const acceptedCount = analysis.feedback.filter((f) => f.status === 'accepted').length;
 
+  // Persist language choice to localStorage whenever it changes
+  useEffect(() => { langStorage.set(lang); }, [lang]);
+
   // On mount: restore session
   useEffect(() => {
     const stored = getStoredAuth();
@@ -608,7 +549,6 @@ export default function App() {
         if (data.user) {
           setUser(data.user);
           setToken(stored.token);
-          setLang((data.user.preferredLanguage as Language) || 'mn');
           setActiveView('overview');
           resetSessionCvState(sessionResetters);
           setSessionReady(false);
@@ -645,7 +585,6 @@ export default function App() {
       storeAuth(data.token, data.user);
       setToken(data.token);
       setUser(data.user);
-      setLang((data.user.preferredLanguage as Language) || 'mn');
       resetSessionCvState(sessionResetters);
       setActiveView('overview');
       setSessionReady(false);
@@ -669,7 +608,6 @@ export default function App() {
       storeAuth(data.token, data.user);
       setToken(data.token);
       setUser(data.user);
-      setLang((data.user.preferredLanguage as Language) || 'mn');
       resetSessionCvState(sessionResetters);
       setSessionReady(true);
       setActiveView('overview');
@@ -704,10 +642,10 @@ export default function App() {
         setAnalysis(normalized.analysis);
         setCurrentCvId(normalized.cvId);
         setActiveView('analysis');
-        setTemporaryToast(lang === 'mn' ? 'Шинжилгээ ачааллагдлаа.' : 'Analysis loaded.');
+        setTemporaryToast(t('analysisLoaded', lang));
       }
     } catch {
-      setTemporaryToast(lang === 'mn' ? 'Ачааллахад алдаа гарлаа.' : 'Failed to load analysis.');
+      setTemporaryToast(t('loadFailed', lang));
     } finally {
       setHistoryLoading('');
     }
@@ -731,17 +669,17 @@ export default function App() {
     setUploadError('');
     const fileType = buildFileType(file);
     if (!fileType) {
-      setUploadError(lang === 'mn' ? 'Зөвхөн PDF болон DOCX файл upload хийнэ үү.' : 'Only PDF and DOCX files are allowed.');
+      setUploadError(t('onlyPdf', lang));
       setSelectedFile(null);
       return;
     }
     if (file.size <= 0) {
-      setUploadError(lang === 'mn' ? 'Хоосон файл байна.' : 'The selected file is empty.');
+      setUploadError(t('emptyFile', lang));
       setSelectedFile(null);
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      setUploadError(lang === 'mn' ? 'Файлын хэмжээ 10MB-аас их байна.' : 'File size must be under 10MB.');
+      setUploadError(t('fileTooLarge', lang));
       setSelectedFile(null);
       return;
     }
@@ -763,12 +701,12 @@ export default function App() {
 
   const runAnalysis = async () => {
     if (!token || !user) {
-      setUploadError(lang === 'mn' ? 'Шинжилгээ хийхийн тулд эхлээд нэвтэрнэ үү.' : 'Please log in to analyze your CV.');
+      setUploadError(t('loginRequired', lang));
       setActiveView('login');
       return;
     }
     if (!selectedFile && !rawText.trim()) {
-      setUploadError(lang === 'mn' ? 'CV файл эсвэл CV текст оруулна уу.' : 'Upload a CV file or paste CV text.');
+      setUploadError(t('cvRequired', lang));
       return;
     }
     setIsProcessing(true);
@@ -801,7 +739,7 @@ export default function App() {
         resetSessionCvState(sessionResetters);
         setSessionReady(true);
         setActiveView('login');
-        setUploadError(lang === 'mn' ? 'Нэвтрэлт хүчинтэй биш. Дахин нэвтэрнэ үү.' : 'Session expired. Please log in again.');
+        setUploadError(t('sessionExpired', lang));
         return;
       }
       if (!res.ok || payload.success === false) throw new Error(payload?.error?.message || 'Analysis failed');
@@ -817,7 +755,7 @@ export default function App() {
             fullName: user?.fullName || '',
           }) || normalized.candidateName;
         setAnalysis(normalized);
-        nextView = 'analysis';
+        nextView = 'rewrite';
         if (payload.cvId) setCurrentCvId(payload.cvId);
         const newOverall = calculateOverall(normalized.scores);
         const newRecord: CvRecord = {
@@ -843,7 +781,7 @@ export default function App() {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
-      setTemporaryToast(msg || (lang === 'mn' ? 'Серверт холбогдож чадсангүй.' : 'Could not connect to server.'));
+      setTemporaryToast(msg || t('serverError', lang));
       setProcessingStatus('completed');
       setIsProcessing(false);
       return;
@@ -868,11 +806,11 @@ export default function App() {
       return {...cur, feedback};
     });
     if (allAccepted) {
-      setTemporaryToast(lang === 'mn' ? 'Бүх санал батлагдлаа. Export хэсэг рүү шилжиж байна…' : 'All suggestions accepted. Opening export…');
+      setTemporaryToast(t('allAcceptedToast', lang));
       window.setTimeout(() => navigateTo('export'), 400);
       return;
     }
-    setTemporaryToast(lang === 'mn' ? 'Санал батлагдлаа.' : 'Suggestion accepted.');
+    setTemporaryToast(t('suggestionAccepted', lang));
   };
 
   const rejectFeedback = async (id: string) => {
@@ -886,7 +824,7 @@ export default function App() {
       ...cur,
       feedback: cur.feedback.map((f) => (f.id === id ? {...f, status: 'rejected' as const} : f)),
     }));
-    setTemporaryToast(lang === 'mn' ? 'Санал татгалзагдлаа.' : 'Suggestion rejected.');
+    setTemporaryToast(t('suggestionRejected', lang));
   };
 
   const regenerateFeedback = async (id: string) => {
@@ -902,7 +840,7 @@ export default function App() {
             ...cur,
             feedback: cur.feedback.map((f) => (f.id === id ? {...f, suggestion: data.suggestion.suggestion, status: 'pending' as const} : f)),
           }));
-          setTemporaryToast(lang === 'mn' ? 'AI suggestion дахин үүсгэлээ.' : 'Suggestion regenerated.');
+          setTemporaryToast(t('suggestionRegenned', lang));
           return;
         }
       } catch {}
@@ -929,7 +867,7 @@ export default function App() {
     const baseFileName = safeFileName(analysis.candidateName || analysis.targetRole || 'improved-cv');
 
     if (!content) {
-      setTemporaryToast(lang === 'mn' ? 'Татах сайжруулсан CV одоогоор алга байна.' : 'No improved CV is available to download yet.');
+      setTemporaryToast(t('noImprovedCv', lang));
       return;
     }
 
@@ -1080,7 +1018,7 @@ export default function App() {
                 type="button"
               >
                 <item.icon size={18} />
-                {lang === 'mn' ? item.labelMn : item.labelEn}
+                {t(item.labelKey, lang)}
               </button>
             ))}
           </nav>
@@ -1089,12 +1027,10 @@ export default function App() {
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
               <div className="flex items-center gap-2 text-emerald-800">
                 <ShieldCheck size={18} />
-                <p className="text-sm font-black">Privacy guard</p>
+                <p className="text-sm font-black">{t('privacyTitle', lang)}</p>
               </div>
               <p className="mt-2 text-xs leading-5 text-emerald-900">
-                {lang === 'mn'
-                  ? 'CV personal data, raw CV text, AI prompt/output console log хийхгүй байх зарчимтай.'
-                  : 'No CV personal data, raw text, AI prompt or output should be logged.'}
+                {t('privacyDesc', lang)}
               </p>
             </div>
           </div>
@@ -1121,9 +1057,9 @@ export default function App() {
               </div>
               <div className="flex items-center gap-3">
                 <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[340px]">
-                  <MiniStat label="Overall" value={overall ? `${overall}/100` : '--'} />
-                  <MiniStat label="Rewrite" value={`${acceptedCount}/${analysis.feedback.length}`} />
-                  <MiniStat label="Status" value={getStatusText(processingStatus, lang)} compact />
+                  <MiniStat label={t('statOverall', lang)} value={overall ? `${overall}/100` : '--'} />
+                  <MiniStat label={t('statRewrite', lang)} value={`${acceptedCount}/${analysis.feedback.length}`} />
+                  <MiniStat label={t('statStatus', lang)} value={getStatusText(processingStatus, lang)} compact />
                 </div>
                 {user && (
                   <ProfileDropdown
@@ -1168,17 +1104,7 @@ export default function App() {
                   runAnalysis={runAnalysis}
                 />
               )}
-              {activeView === 'analysis' && (
-                <AnalysisView
-                  analysis={analysis}
-                  overall={overall}
-                  lang={lang}
-                  profileImage={profileImage}
-                  accountFullName={user?.fullName}
-                  cvSessionKey={cvSessionKey}
-                  onEditCv={() => navigateTo('rewrite')}
-                />
-              )}
+              {activeView === 'analysis' && <AnalysisView analysis={analysis} overall={overall} lang={lang} onReanalyze={() => navigateTo('upload')} onExport={() => navigateTo('rewrite')} />}
               {activeView === 'rewrite' && (
                 <RewriteView
                   analysis={analysis}
@@ -1186,7 +1112,7 @@ export default function App() {
                   acceptFeedback={acceptFeedback}
                   rejectFeedback={rejectFeedback}
                   regenerateFeedback={regenerateFeedback}
-                  onGoExport={() => navigateTo('export')}
+                  onContinue={() => navigateTo('export')}
                 />
               )}
               {activeView === 'interview' && <InterviewView analysis={analysis} lang={lang} />}
@@ -1386,15 +1312,15 @@ function OverviewView({lang, records, analysis, overall, setActiveView}: {lang: 
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
       <section className="space-y-5">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <ScoreCard icon={Gauge} label={lang === 'mn' ? 'Нийт оноо' : 'Overall Score'} value={overall} helper={lang === 'mn' ? '5 метрикийн дундаж' : '5 metric average'} />
-          <ScoreCard icon={FileCheck2} label="ATS Score" value={analysis.scores[0]?.value || 0} helper={lang === 'mn' ? 'Keyword & бүтэц' : 'Keyword & structure'} />
-          <ScoreCard icon={ClipboardCheck} label="Grammar" value={analysis.scores[4]?.value || 0} helper={lang === 'mn' ? 'Tone & алдаа' : 'Tone & spelling'} />
-          <ScoreCard icon={BriefcaseBusiness} label={lang === 'mn' ? 'Skill тохирол' : 'Skills Match'} value={analysis.scores[2]?.value || 0} helper={lang === 'mn' ? 'Зорилтот ажилд тохирол' : 'Target role fit'} />
+          <ScoreCard icon={Gauge} label={t('overallScoreLabel', lang)} value={overall} helper={t('overallHelper', lang)} />
+          <ScoreCard icon={FileCheck2} label="ATS Score" value={analysis.scores[0]?.value || 0} helper={t('atsHelper', lang)} />
+          <ScoreCard icon={ClipboardCheck} label={t('grammarLabel', lang)} value={analysis.scores[4]?.value || 0} helper={t('grammarHelper', lang)} />
+          <ScoreCard icon={BriefcaseBusiness} label={t('skillsMatchLabel', lang)} value={analysis.scores[2]?.value || 0} helper={t('skillsMatchHelper', lang)} />
         </div>
 
-        <Panel title={lang === 'mn' ? 'Сүүлийн CV файлууд' : 'Recent CVs'} icon={History}>
+        <Panel title={t('recentCvs', lang)} icon={History}>
           {records.length === 0 ? (
-            <p className="text-sm text-slate-500">{lang === 'mn' ? 'Одоохондоо CV байхгүй байна. Upload хийнэ үү.' : 'No CVs yet. Upload one to get started.'}</p>
+            <p className="text-sm text-slate-500">{t('noCvs', lang)}</p>
           ) : (
             <div className="divide-y divide-slate-200">
               {records.map((record) => (
@@ -1418,25 +1344,25 @@ function OverviewView({lang, records, analysis, overall, setActiveView}: {lang: 
           )}
         </Panel>
 
-        <Panel title={lang === 'mn' ? 'AI feedback хураангуй' : 'AI feedback summary'} icon={Sparkles}>
-          <p className="text-sm leading-7 text-slate-700">{analysis.summary || (lang === 'mn' ? 'CV upload хийснийхээ дараа шинжилгээ гарна.' : 'Analysis will appear after you upload a CV.')}</p>
+        <Panel title={t('aiFeedbackTitle', lang)} icon={Sparkles}>
+          <p className="text-sm leading-7 text-slate-700">{analysis.summary || t('aiFeedbackEmpty', lang)}</p>
           {(analysis.strengths.length > 0 || analysis.weaknesses.length > 0) && (
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <Checklist title={lang === 'mn' ? 'Давуу тал' : 'Strengths'} items={analysis.strengths} positive />
-              <Checklist title={lang === 'mn' ? 'Сайжруулах хэсэг' : 'Areas to improve'} items={analysis.weaknesses} />
+              <Checklist title={t('strengthsLabel', lang)} items={analysis.strengths} positive />
+              <Checklist title={t('areasLabel', lang)} items={analysis.weaknesses} />
             </div>
           )}
         </Panel>
       </section>
 
       <aside className="space-y-5">
-        <Panel title={lang === 'mn' ? 'Хурдан үйлдлүүд' : 'Quick Actions'} icon={ArrowRight}>
+        <Panel title={t('quickActions', lang)} icon={ArrowRight}>
           <div className="space-y-2">
             {[
-              {label: lang === 'mn' ? 'Шинэ CV upload хийх' : 'Upload new CV', view: 'upload' as ActiveView, icon: UploadCloud},
-              {label: lang === 'mn' ? 'Rewrite санал харах' : 'Review rewrites', view: 'rewrite' as ActiveView, icon: Sparkles},
-              {label: lang === 'mn' ? 'Interview бэлтгэх' : 'Prepare interview', view: 'interview' as ActiveView, icon: MessageSquareText},
-              {label: lang === 'mn' ? 'Export татах' : 'Download export', view: 'export' as ActiveView, icon: Download},
+              {label: t('uploadNewCv', lang), view: 'upload' as ActiveView, icon: UploadCloud},
+              {label: t('reviewRewrites', lang), view: 'rewrite' as ActiveView, icon: Sparkles},
+              {label: t('prepareInterview', lang), view: 'interview' as ActiveView, icon: MessageSquareText},
+              {label: t('downloadExport', lang), view: 'export' as ActiveView, icon: Download},
             ].map((action) => (
               <button
                 key={action.label}
@@ -1451,12 +1377,9 @@ function OverviewView({lang, records, analysis, overall, setActiveView}: {lang: 
           </div>
         </Panel>
 
-        <Panel title={lang === 'mn' ? 'Аюулгүй байдлын шалгуур' : 'Security checklist'} icon={LockKeyhole}>
+        <Panel title={t('securityTitle', lang)} icon={LockKeyhole}>
           <div className="space-y-3 text-sm text-slate-700">
-            {(lang === 'mn'
-              ? ['OpenAI API key frontend дээр байхгүй', 'Prompt injection guardrail server prompt-д байна', 'Sensitive CV data console log хийхгүй', 'JWT токен нь LocalStorage-д хадгалагдана']
-              : ['OpenAI API key is not exposed on frontend', 'Prompt injection guardrails in server prompt', 'Sensitive CV data is not console logged', 'JWT token stored in localStorage']
-            ).map((item) => (
+            {tArr('securityItems', lang).map((item) => (
               <div key={item} className="flex gap-3">
                 <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-600" size={17} />
                 <span>{item}</span>
@@ -1486,7 +1409,7 @@ function UploadView({lang, copy, selectedFile, uploadError, rawText, jobDescript
             if (file) handleFile(file);
           }}
         >
-          <input ref={fileInputRef} className="hidden" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          <input ref={fileInputRef} className="hidden" type="file" accept=".pdf,application/pdf"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
           <div className="mx-auto flex size-14 items-center justify-center rounded-lg bg-slate-950 text-white">
             <UploadCloud size={28} />
@@ -1494,7 +1417,7 @@ function UploadView({lang, copy, selectedFile, uploadError, rawText, jobDescript
           <h2 className="mt-4 text-lg font-black text-slate-950">
             {selectedFile ? selectedFile.name : copy.dropFile}
           </h2>
-          <p className="mt-2 text-sm text-slate-500">PDF / DOCX / Max 10MB</p>
+          <p className="mt-2 text-sm text-slate-500">PDF / Max 10MB</p>
           <button className="mt-5 rounded-lg bg-slate-950 px-5 py-3 text-sm font-black text-white hover:bg-slate-800"
             onClick={() => fileInputRef.current?.click()} type="button">{copy.chooseFile}</button>
           {uploadError && (
@@ -1507,7 +1430,7 @@ function UploadView({lang, copy, selectedFile, uploadError, rawText, jobDescript
         {/* Profile image upload */}
         <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
           <p className="mb-3 text-xs font-black uppercase text-slate-500">
-            {lang === 'mn' ? 'Профайл зураг (заавал биш — PDF-д харагдана)' : 'Profile photo (optional — appears in exported PDF)'}
+            {t('profilePhotoLabel', lang)}
           </p>
           <div className="flex items-center gap-4">
             {profileImage ? (
@@ -1530,7 +1453,7 @@ function UploadView({lang, copy, selectedFile, uploadError, rawText, jobDescript
                 onClick={() => profileImageRef.current?.click()}
                 type="button"
               >
-                {lang === 'mn' ? 'Зураг сонгох' : 'Choose photo'}
+                {t('choosePhoto', lang)}
               </button>
               {profileImage && (
                 <button
@@ -1538,7 +1461,7 @@ function UploadView({lang, copy, selectedFile, uploadError, rawText, jobDescript
                   onClick={clearProfileImage}
                   type="button"
                 >
-                  {lang === 'mn' ? 'Арилгах' : 'Remove'}
+                  {t('removePhoto', lang)}
                 </button>
               )}
             </div>
@@ -1550,13 +1473,13 @@ function UploadView({lang, copy, selectedFile, uploadError, rawText, jobDescript
             <span className="text-xs font-black uppercase text-slate-500">{copy.rawText}</span>
             <textarea className="min-h-56 w-full rounded-lg border border-slate-300 bg-white p-4 text-sm leading-6 text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               value={rawText} onChange={(e) => setRawText(e.target.value)}
-              placeholder={lang === 'mn' ? 'CV текстийг энд буулгана уу...' : 'Paste CV text here...'} />
+              placeholder={t('pasteCvPlaceholder', lang)} />
           </label>
           <label className="space-y-2">
             <span className="text-xs font-black uppercase text-slate-500">{copy.jobDesc}</span>
             <textarea className="min-h-56 w-full rounded-lg border border-slate-300 bg-white p-4 text-sm leading-6 text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               value={jobDescription} onChange={(e) => setJobDescription(e.target.value)}
-              placeholder={lang === 'mn' ? 'Зорилтот ажлын байрны шаардлагыг буулгана уу...' : 'Paste target job description to optimize keywords...'} />
+              placeholder={t('pasteJobPlaceholder', lang)} />
           </label>
         </div>
 
@@ -1568,7 +1491,7 @@ function UploadView({lang, copy, selectedFile, uploadError, rawText, jobDescript
         </button>
       </Panel>
 
-      <Panel title={lang === 'mn' ? 'Боловсруулалтын явц' : 'Processing status'} icon={Gauge}>
+      <Panel title={t('processingStatus', lang)} icon={Gauge}>
         <div className="space-y-4">
           {(['uploaded', 'parsing', 'analyzing', 'completed'] as CvStatus[]).map((status) => (
             <div key={status} className="flex gap-3 rounded-lg p-2">
@@ -1581,10 +1504,10 @@ function UploadView({lang, copy, selectedFile, uploadError, rawText, jobDescript
               <div>
                 <p className="text-sm font-black text-slate-950">{getStatusText(status, lang)}</p>
                 <p className="text-xs leading-5 text-slate-500">
-                  {status === 'uploaded' && (lang === 'mn' ? 'Файл шалгах, хэмжээ/төрөл баталгаажуулах' : 'File validation, size/type check')}
-                  {status === 'parsing' && (lang === 'mn' ? 'Текст болон бүтэцтэй JSON гаргах' : 'Raw text + structured JSON extraction')}
-                  {status === 'analyzing' && (lang === 'mn' ? 'AI шинжилгээ болон schema баталгаажуулалт' : 'Stage-based AI scoring + schema validation')}
-                  {status === 'completed' && (lang === 'mn' ? 'Dashboard, rewrite, interview, export бэлэн' : 'Dashboard, rewrite, interview, export ready')}
+                  {status === 'uploaded' && t('stepUploadedDesc', lang)}
+                  {status === 'parsing' && t('stepParsingDesc', lang)}
+                  {status === 'analyzing' && t('stepAnalyzingDesc', lang)}
+                  {status === 'completed' && t('stepCompletedDesc', lang)}
                 </p>
               </div>
             </div>
@@ -1595,122 +1518,235 @@ function UploadView({lang, copy, selectedFile, uploadError, rawText, jobDescript
   );
 }
 
-function AnalysisView({
-  analysis,
-  overall,
-  lang,
-  profileImage,
-  accountFullName,
-  cvSessionKey,
-  onEditCv,
-}: {
-  analysis: AnalysisResult;
-  overall: number;
-  lang: Language;
-  profileImage: string;
-  accountFullName?: string;
-  cvSessionKey: string;
-  onEditCv: () => void;
+function ScoreGauge({value}: {value: number}) {
+  const r = 52;
+  const circ = 2 * Math.PI * r;
+  const filled = Math.min(value / 100, 1) * circ;
+  const color = value >= 75 ? '#22c55e' : value >= 50 ? '#f59e0b' : '#ef4444';
+  return (
+    <svg width="136" height="136" viewBox="0 0 136 136">
+      <circle cx="68" cy="68" r={r} fill="none" stroke="#e5e7eb" strokeWidth="13" />
+      <circle cx="68" cy="68" r={r} fill="none" stroke={color} strokeWidth="13"
+        strokeDasharray={`${filled} ${circ}`} strokeLinecap="round"
+        transform="rotate(-90 68 68)" />
+      <text x="68" y="63" textAnchor="middle" fontSize="30" fontWeight="900" fill="#0f172a">{value}</text>
+      <text x="68" y="83" textAnchor="middle" fontSize="12" fill="#94a3b8">/ 100</text>
+    </svg>
+  );
+}
+
+function buildSectionScores(analysis: AnalysisResult, lang: Language) {
+  const find = (key: string) => analysis.scores.find(s => s.key === key)?.value ?? 0;
+  const hasContactIssue = analysis.weaknesses.some(w => /холбоо|contact|email|утас|phone/i.test(w));
+  const hasEduIssue = analysis.weaknesses.some(w => /боловсрол|education|сургууль|degree/i.test(w));
+  const sections = [
+    {label: t('secContact', lang),    score: hasContactIssue ? 0 : 8},
+    {label: t('secSummary', lang),    score: Math.round(find('readability') / 10)},
+    {label: t('secExperience', lang), score: Math.round(find('experience') / 10)},
+    {label: t('secEducation', lang),  score: hasEduIssue ? 3 : Math.round(find('readability') / 14)},
+    {label: t('secSkills', lang),     score: Math.round(find('skillsMatch') / 10)},
+  ];
+  return sections.map(s => ({...s, max: 10, bad: s.score < 3}));
+}
+
+function AnalysisView({analysis, overall, lang, onReanalyze, onExport}: {
+  analysis: AnalysisResult; overall: number; lang: Language;
+  onReanalyze: () => void; onExport: () => void;
 }) {
-  const cvData = buildCvPreviewData(analysis, accountFullName);
+  const levelLabel = overall >= 75
+    ? (lang === 'mn' ? 'Өндөр' : 'High')
+    : overall >= 50
+      ? (lang === 'mn' ? 'Дунд' : 'Medium')
+      : (lang === 'mn' ? 'Бага' : 'Low');
+  const levelColor = overall >= 75 ? 'bg-emerald-100 text-emerald-700' : overall >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
+  const sections = buildSectionScores(analysis, lang);
+  const standardMatch = sections.length > 0
+    ? Math.round(sections.reduce((sum, s) => sum + s.score, 0) / (sections.length * 10) * 100)
+    : 0;
+  const missingItems = analysis.weaknesses.length ? analysis.weaknesses : analysis.keywords.missing;
+  const recommendations = analysis.feedback.map(f => f.suggestion).filter(Boolean);
 
   return (
-    <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-5 xl:col-span-2">
-          <p className="text-xs font-black uppercase text-blue-800">{lang === 'mn' ? 'Нийт CV оноо' : 'Overall CV Score'}</p>
-          <div className="mt-3 flex items-end gap-2">
-            <span className="text-6xl font-black text-slate-950">{overall}</span>
-            <span className="mb-2 text-lg font-black text-slate-500">/100</span>
+    <div className="w-full space-y-5">
+      {/* Header label */}
+      <div>
+        <p className="text-xs font-black uppercase tracking-widest text-indigo-600">{lang === 'mn' ? 'AI ШИНЖИЛГЭЭ' : 'AI ANALYSIS'}</p>
+        <h2 className="mt-1 text-3xl font-black text-slate-950">{lang === 'mn' ? 'CV Анализ' : 'CV Analysis'}</h2>
+        <p className="text-sm text-slate-500">{lang === 'mn' ? 'AI тусламжтайгаар CV загварыг сайжруул' : 'Improve your CV with AI assistance'}</p>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
+        <section className="space-y-5">
+          {/* Score card */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col items-center gap-5 md:flex-row md:items-start">
+              <div className="shrink-0">
+                <ScoreGauge value={overall} />
+              </div>
+              <div className="min-w-0 flex-1 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`inline-block rounded-full px-4 py-1 text-sm font-black ${levelColor}`}>{levelLabel}</span>
+                  {standardMatch > 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-4 py-1 text-sm font-black text-blue-700">
+                      <FileCheck2 size={14} />
+                      {lang === 'mn' ? `Стандарт CV тохирол: ${standardMatch}%` : `Standard CV match: ${standardMatch}%`}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm leading-7 text-slate-700">{analysis.summary || (lang === 'mn' ? 'CV шинжилгээ хийгдлээ.' : 'CV analysis complete.')}</p>
+              </div>
+            </div>
           </div>
-          <p className="mt-3 text-sm leading-6 text-slate-700">{analysis.summary}</p>
-        </div>
-        {analysis.scores.map((metric) => <MetricTile key={metric.key} metric={metric} />)}
+
+          {/* Strengths / Weaknesses */}
+          {(analysis.strengths.length > 0 || analysis.weaknesses.length > 0) && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                <div className="mb-3 flex items-center gap-2 text-emerald-700">
+                  <CheckCircle2 size={18} />
+                  <p className="text-sm font-black">{lang === 'mn' ? 'Давуу талууд' : 'Strengths'}</p>
+                </div>
+                <ul className="space-y-2">
+                  {analysis.strengths.slice(0, 5).map(item => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-slate-700">
+                      <span className="mt-1.5 size-2 shrink-0 rounded-full bg-emerald-500" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                <div className="mb-3 flex items-center gap-2 text-amber-700">
+                  <AlertTriangle size={18} />
+                  <p className="text-sm font-black">{lang === 'mn' ? 'Сул талууд' : 'Weaknesses'}</p>
+                </div>
+                <ul className="space-y-2">
+                  {analysis.weaknesses.slice(0, 5).map(item => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-slate-700">
+                      <span className="mt-1.5 size-2 shrink-0 rounded-full bg-amber-500" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* Recommendations */}
+          {recommendations.length > 0 && (
+            <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
+              <div className="mb-3 flex items-center gap-2 text-indigo-700">
+                <Sparkles size={18} />
+                <p className="text-sm font-black">{lang === 'mn' ? 'Зөвлөмжүүд' : 'Recommendations'}</p>
+              </div>
+              <ol className="grid gap-3 lg:grid-cols-2">
+                {recommendations.map((rec, i) => (
+                  <li key={i} className="flex items-start gap-3 text-sm text-indigo-900">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-black text-white">{i + 1}</span>
+                    {rec}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </section>
+
+        <aside className="space-y-5">
+          {/* Missing sections */}
+          {missingItems.length > 0 && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5">
+              <div className="mb-3 flex items-center gap-2 text-rose-700">
+                <AlertTriangle size={18} />
+                <p className="text-sm font-black">{lang === 'mn' ? 'Дутуу хэсгүүд' : 'Missing sections'}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {missingItems.slice(0, 8).map((item) => (
+                  <span key={item} className="rounded-full border border-rose-300 bg-white px-3 py-1 text-xs font-bold text-rose-700">{item}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Section scores */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="mb-4 text-sm font-black text-slate-950">{lang === 'mn' ? 'Хэсэг бүрийн үнэлгээ' : 'Section scores'}</p>
+            <div className="space-y-4">
+              {sections.map(sec => (
+                <div key={sec.label}>
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-800">{sec.label}</span>
+                    <div className="flex items-center gap-2">
+                      {sec.bad && (
+                        <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-black text-rose-600">
+                          {lang === 'mn' ? 'Дутуу' : 'Missing'}
+                        </span>
+                      )}
+                      <span className="text-sm font-black text-slate-950">{sec.score}/{sec.max}</span>
+                    </div>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-slate-100">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-700 ${sec.bad ? 'bg-rose-400' : sec.score < 6 ? 'bg-amber-400' : 'bg-emerald-500'}`}
+                      style={{width: `${(sec.score / sec.max) * 100}%`}}
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">{analysis.scores.find(s => {
+                    if (sec.label.includes('Товч') || sec.label.includes('Summary')) return s.key === 'readability';
+                    if (sec.label.includes('Ур') || sec.label.includes('Skill')) return s.key === 'skillsMatch';
+                    if (sec.label.includes('Ажлын') || sec.label.includes('Work')) return s.key === 'experience';
+                    return false;
+                  })?.explanation ?? ''}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={onReanalyze}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50"
+              type="button"
+            >
+              {lang === 'mn' ? 'Дахин анализ хийх' : 'Re-analyze'}
+            </button>
+            <button
+              onClick={onExport}
+              className="rounded-xl bg-indigo-600 px-4 py-3 text-sm font-black text-white hover:bg-indigo-500"
+              type="button"
+            >
+              {lang === 'mn' ? 'CV үүсгэх' : 'Build CV'}
+            </button>
+          </div>
+        </aside>
       </div>
-
-      <Panel title={lang === 'mn' ? 'Сайжруулсан CV' : 'Improved CV'} icon={FileCheck2}>
-        <ExportPdfPreview key={cvSessionKey} analysis={cvData} profileImage={profileImage} lang={lang} size="md" showIntro />
-        <button
-          type="button"
-          onClick={onEditCv}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-5 py-3.5 text-sm font-black uppercase text-white transition-colors hover:bg-slate-800 active:scale-[.98]"
-        >
-          <Sparkles size={18} />
-          {lang === 'mn' ? 'CV засах' : 'Edit CV'}
-          <ArrowRight size={16} />
-        </button>
-      </Panel>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Panel title={lang === 'mn' ? 'Дутуу keyword' : 'Missing keywords'} icon={Target}>
-          <KeywordCloud items={analysis.keywords.missing} tone="missing" />
-        </Panel>
-        <Panel title={lang === 'mn' ? 'Санал болгох keyword' : 'Recommended keywords'} icon={Sparkles}>
-          <KeywordCloud items={analysis.keywords.recommended} tone="recommended" />
-        </Panel>
-      </div>
-
-      <Panel title={lang === 'mn' ? 'Recruiter feedback' : 'Recruiter-style feedback'} icon={UserRound}>
-        <div className="grid gap-4 lg:grid-cols-3">
-          {analysis.feedback.map((item) => <FeedbackCard key={item.id} item={item} lang={lang} compact />)}
-        </div>
-      </Panel>
     </div>
   );
 }
 
-function RewriteView({
-  analysis,
-  lang,
-  acceptFeedback,
-  rejectFeedback,
-  regenerateFeedback,
-  onGoExport,
-}: {
-  analysis: AnalysisResult;
-  lang: Language;
-  acceptFeedback: (id: string) => void;
-  rejectFeedback: (id: string) => void;
-  regenerateFeedback: (id: string) => void;
-  onGoExport: () => void;
+function RewriteView({analysis, lang, acceptFeedback, rejectFeedback, regenerateFeedback, onContinue}: {
+  analysis: AnalysisResult; lang: Language;
+  acceptFeedback: (id: string) => void; rejectFeedback: (id: string) => void; regenerateFeedback: (id: string) => void;
+  onContinue?: () => void;
 }) {
   const allAccepted =
     analysis.feedback.length > 0 && analysis.feedback.every((f) => f.status === 'accepted');
 
   return (
-    <Panel title={lang === 'mn' ? 'AI rewrite саналууд' : 'AI rewrite suggestions'} icon={Sparkles}>
-      {allAccepted ? (
-        <div className="mb-5 flex flex-col gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm font-bold text-emerald-900">
-            {lang === 'mn' ? 'Бүх санал батлагдсан. Одоо CV-ээ татаж аваарай.' : 'All suggestions accepted. Download your CV.'}
-          </p>
-          <button
-            type="button"
-            onClick={onGoExport}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-xs font-black uppercase text-white hover:bg-emerald-600"
-          >
-            <Download size={16} />
-            {lang === 'mn' ? 'Export руу очих' : 'Go to export'}
-          </button>
-        </div>
-      ) : null}
-      {analysis.feedback.length === 0 ? (
-        <p className="text-sm text-slate-500">{lang === 'mn' ? 'Эхлээд CV upload хийж шинжилгээ хийлгэнэ үү.' : 'Upload and analyze a CV first.'}</p>
-      ) : (
-        <div className="grid gap-4 xl:grid-cols-3">
-          {analysis.feedback.map((item) => (
-            <FeedbackCard key={item.id} item={item} lang={lang} showExplanation={false}
-              actions={
-                item.status === 'accepted' ? (
-                  <p className="mt-5 flex items-center justify-center gap-2 rounded-lg bg-emerald-50 py-3 text-xs font-black uppercase text-emerald-800">
-                    <Check size={15} /> {lang === 'mn' ? 'Батлагдсан' : 'Accepted'}
-                  </p>
-                ) : (
+    <div className="space-y-5">
+      <Panel title={lang === 'mn' ? 'AI rewrite саналууд' : 'AI rewrite suggestions'} icon={Sparkles}>
+        {analysis.feedback.length === 0 ? (
+          <p className="text-sm text-slate-500">{lang === 'mn' ? 'Эхлээд CV upload хийж шинжилгээ хийлгэнэ үү.' : 'Upload and analyze a CV first.'}</p>
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-3">
+            {analysis.feedback.map((item) => (
+              <FeedbackCard key={item.id} item={item} lang={lang}
+                actions={
                   <div className="mt-5 flex flex-col gap-2 sm:flex-row xl:flex-col 2xl:flex-row">
                     <button
-                      className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-3 text-xs font-black uppercase text-white hover:bg-emerald-600"
-                      onClick={() => acceptFeedback(item.id)} type="button">
-                      <Check size={15} /> {lang === 'mn' ? 'Батлах' : 'Accept'}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-3 text-xs font-black uppercase text-white hover:bg-emerald-600 disabled:opacity-50"
+                      disabled={item.status === 'accepted'} onClick={() => acceptFeedback(item.id)} type="button">
+                      <Check size={15} /> {item.status === 'accepted' ? (lang === 'mn' ? 'Батлагдсан' : 'Accepted') : (lang === 'mn' ? 'Батлах' : 'Accept')}
                     </button>
                     <button
                       className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-slate-50"
@@ -1723,13 +1759,27 @@ function RewriteView({
                       <X size={15} /> {lang === 'mn' ? 'Татгалзах' : 'Reject'}
                     </button>
                   </div>
-                )
-              }
-            />
-          ))}
+                }
+              />
+            ))}
+          </div>
+        )}
+      </Panel>
+
+      {onContinue && (
+        <div className="flex justify-end">
+          <button
+            onClick={onContinue}
+            className="flex items-center gap-3 rounded-xl bg-indigo-600 px-8 py-4 text-sm font-black text-white hover:bg-indigo-500 active:scale-[.98] transition-transform"
+            type="button"
+          >
+            <Download size={18} />
+            {lang === 'mn' ? 'CV татаж авах' : 'Download CV'}
+            <ArrowRight size={18} />
+          </button>
         </div>
       )}
-    </Panel>
+    </div>
   );
 }
 
@@ -1792,70 +1842,78 @@ function ExportView({
   cvSessionKey: string;
   exportOptimizedCv: () => Promise<void>;
 }) {
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const cvData = buildCvPreviewData(analysis, accountFullName);
-
-  const changes = analysis.feedback.map((f) => ({
-    id: f.id,
-    before: f.original,
-    after: f.suggestion,
-    status: f.status,
-  }));
-
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px] xl:grid-cols-[minmax(0,1fr)_280px]">
-      <Panel title={lang === 'mn' ? 'Сайжруулалтын тайлбар' : 'What we improved'} icon={Sparkles}>
-        <p className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900">
-          {lang === 'mn' ? 'Таны CV-г ингэж сайжрууллаа' : 'Your CV has been improved like this'}
-        </p>
-        <CvExportImprovements
-          lang={lang}
-          summary={analysis.summary}
-          changes={changes}
-          addedKeywords={analysis.keywords.recommended}
-          strengths={analysis.strengths}
-        />
-      </Panel>
+    <div className="mx-auto max-w-3xl space-y-5">
+      {/* CV Preview — shown ABOVE the download button */}
+      <Panel title={lang === 'mn' ? 'Урьдчилан харах (Preview)' : 'Preview'} icon={FileCheck2}>
+        <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+          {/* Navy sidebar + content layout mimicking the exported PDF */}
+          <div className="flex min-h-[420px]">
+            {/* Sidebar */}
+            <div className="w-44 shrink-0 bg-slate-900 p-5 text-white">
+              <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-white/10 text-2xl font-black text-white">
+                {(analysis.candidateName || 'C').charAt(0).toUpperCase()}
+              </div>
+              <p className="text-xs font-black uppercase tracking-widest text-slate-400">{lang === 'mn' ? 'Мэргэжил' : 'Role'}</p>
+              <p className="mt-1 text-sm font-bold text-slate-100 leading-5">{analysis.targetRole || '—'}</p>
 
-      <aside className="lg:sticky lg:top-4 lg:self-start">
-        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-          {lang === 'mn' ? 'Урьдчилан харах' : 'Preview'}
-        </p>
-        <button
-          type="button"
-          onClick={() => setPreviewOpen(true)}
-          className="group w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100/80 p-2 text-left shadow-sm transition-colors hover:border-blue-300 hover:bg-blue-50/50"
-        >
-          <div className="relative h-[min(420px,55vh)] overflow-hidden rounded-lg bg-white shadow-inner">
-            <div className="pointer-events-none absolute left-0 top-0 w-[115%] origin-top-left scale-[0.48] sm:scale-[0.52]">
-              <ExportPdfPreview key={cvSessionKey} analysis={cvData} profileImage={profileImage} lang={lang} size="sm" />
+              {analysis.keywords.recommended.length > 0 && (
+                <div className="mt-5">
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">{lang === 'mn' ? 'Ур чадвар' : 'Skills'}</p>
+                  <div className="mt-2 space-y-1">
+                    {analysis.keywords.recommended.slice(0, 6).map((kw) => (
+                      <p key={kw} className="text-xs font-medium text-slate-300">{kw}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 bg-gradient-to-t from-slate-900/70 to-transparent py-3 text-[10px] font-bold uppercase tracking-wide text-white opacity-90 group-hover:opacity-100">
-              <ZoomIn size={14} />
-              {lang === 'mn' ? 'Дарж томруулан харах' : 'Click to enlarge'}
+
+            {/* Main content */}
+            <div className="flex-1 p-6">
+              <p className="text-xl font-black text-slate-950">{analysis.candidateName || (lang === 'mn' ? 'Нэр' : 'Name')}</p>
+
+              <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-blue-600">{lang === 'mn' ? 'Мэргэжлийн хураангуй' : 'Professional Summary'}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">{analysis.summary || (lang === 'mn' ? 'CV шинжилгээний дараа гарна.' : 'Run analysis to see preview.')}</p>
+
+              {analysis.rewrittenCv.trim() && (
+                <>
+                  <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-blue-600">{lang === 'mn' ? 'Сайжруулсан CV' : 'Rewritten CV'}</p>
+                  <pre className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-700 line-clamp-6">{analysis.rewrittenCv.slice(0, 400)}{analysis.rewrittenCv.length > 400 ? '…' : ''}</pre>
+                </>
+              )}
+
+              {analysis.strengths.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">{lang === 'mn' ? 'Давуу тал' : 'Strengths'}</p>
+                  <div className="mt-1 space-y-0.5">
+                    {analysis.strengths.slice(0, 3).map((s) => (
+                      <p key={s} className="text-xs text-slate-600">• {s}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </button>
+        </div>
+        <p className="mt-3 text-xs text-slate-400 text-center">{lang === 'mn' ? 'Энэ бол PDF-ийн хялбаршуулсан урьдчилан харалт юм.' : 'This is a simplified preview of the exported PDF.'}</p>
+      </Panel>
+
+      {/* Download button — BELOW the preview */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <button
-          type="button"
+          className="flex w-full items-center justify-center gap-3 rounded-xl bg-indigo-600 px-6 py-4 text-base font-black text-white hover:bg-indigo-500 active:scale-[.98] transition-transform"
           onClick={() => exportOptimizedCv()}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white shadow-md transition-colors hover:bg-slate-800 active:scale-[.98]"
+          type="button"
         >
-          <Download size={18} />
-          {lang === 'mn' ? 'PDF татах' : 'Download PDF'}
+          <Download size={20} /> {lang === 'mn' ? 'PDF татаж авах' : 'Download PDF'}
         </button>
-        <p className="mt-2 text-center text-[10px] leading-4 text-slate-500">
-          {lang === 'mn' ? 'Татах PDF нь энэ preview-тэй ижил.' : 'Downloaded PDF matches this preview.'}
+        <p className="mt-4 text-center text-xs leading-5 text-slate-500">
+          {lang === 'mn'
+            ? 'PDF нь professional хоёр баганат загвараар үүснэ. Профайл зураг оруулсан бол PDF-д харагдана.'
+            : 'PDF is generated as a professional two-column layout. Your profile photo will appear if uploaded.'}
         </p>
-        <CvPreviewModal
-          key={cvSessionKey}
-          open={previewOpen}
-          onClose={() => setPreviewOpen(false)}
-          lang={lang}
-          analysis={cvData}
-          profileImage={profileImage}
-        />
-      </aside>
+      </div>
     </div>
   );
 }
@@ -1972,21 +2030,6 @@ function ScoreCard({icon: Icon, label, value, helper}: {icon: LucideIcon; label:
   );
 }
 
-function MetricTile({metric}: {metric: Metric}) {
-  return (
-    <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-black text-slate-950">{metric.label}</p>
-        <span className="rounded-md bg-slate-950 px-3 py-1 text-xs font-black text-white">{metric.value}/100</span>
-      </div>
-      <div className="mt-4 h-2 rounded bg-slate-100">
-        <div className="h-2 rounded bg-emerald-600 transition-all duration-700" style={{width: `${metric.value}%`}} />
-      </div>
-      <p className="mt-4 text-sm leading-6 text-slate-600">{metric.explanation}</p>
-      <p className="mt-3 text-xs font-bold text-slate-500">Confidence: {Math.round(metric.confidence * 100)}%</p>
-    </article>
-  );
-}
 
 function Checklist({title, items, positive}: {title?: string; items: string[]; positive?: boolean}) {
   return (

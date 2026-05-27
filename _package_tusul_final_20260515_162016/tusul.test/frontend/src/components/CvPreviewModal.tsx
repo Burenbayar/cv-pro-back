@@ -41,7 +41,7 @@ export function CvPreviewModal({open, onClose, lang, analysis, profileImage}: Cv
       <div className="relative z-10 flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3">
           <p className="flex items-center gap-2 text-sm font-black text-slate-900">
-            <ZoomIn size={18} className="text-blue-600" />
+            <ZoomIn size={18} className="text-blue-600" /> 
             {title}
           </p>
           <button
