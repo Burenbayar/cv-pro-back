@@ -151,7 +151,7 @@ const T = {
   currentLevelLabel:   { mn: 'Одоогийн түвшин',       en: 'Current level' },
   estimatedDuration:   { mn: 'Тооцоолсон хугацаа',   en: 'Estimated duration' },
   recommendedRoles:    { mn: 'Санал болгох ажлын байр', en: 'Recommended roles' },
-  missingSkillsTitle:  { mn: 'Дутуу ур чадвар',            en: 'Missing skills' },
+  missingSkillsTitle:  { mn: 'Сайжруулах ур чадвар',            en: 'Skills to improve' },
   roadmapTitle:        { mn: '3-6 сарын төлөвлөгөө',      en: '3-6 month roadmap' },
 
   // Export view

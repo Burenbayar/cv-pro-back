@@ -1,7 +1,7 @@
-import type {ReactNode} from 'react';
-import {enrichParsedCv, parseCvSections, resolveCandidateName, type CvLanguage} from '@shared/cvSections';
-import {normalizeCvTextForParse, sanitizeParsedForTemplate} from '@shared/cvTemplateSanitize';
-import {resolveDisplayRole} from '@shared/cvProfession';
+import type { ReactNode } from 'react';
+import { enrichParsedCv, parseCvSections, resolveCandidateName, type CvLanguage } from '@shared/cvSections';
+import { normalizeCvTextForParse, sanitizeParsedForTemplate } from '@shared/cvTemplateSanitize';
+import { resolveDisplayRole } from '@shared/cvProfession';
 import {
   CV_THEME,
   parseContactFields,
@@ -10,7 +10,7 @@ import {
   splitExperienceBlocks,
   templateLabels,
 } from '@shared/cvTemplateTheme';
-import {t as tr} from '../i18n';
+import { t as tr } from '../i18n';
 
 export type CvTemplateData = {
   candidateName: string;
@@ -28,7 +28,7 @@ type CvTemplateDocumentProps = {
   compact?: boolean;
 };
 
-export function CvTemplateDocument({data, profileImage, lang, compact = false}: CvTemplateDocumentProps) {
+export function CvTemplateDocument({ data, profileImage, lang, compact = false }: CvTemplateDocumentProps) {
   const t = templateLabels(lang);
   const rawSource = (data.sourceCvText || data.rewrittenCv).trim();
   const normalizedRaw = normalizeCvTextForParse(rawSource);
@@ -40,7 +40,7 @@ export function CvTemplateDocument({data, profileImage, lang, compact = false}: 
       fullName: data.accountFullName || data.candidateName,
     }) || tr('previewNameFallback', lang);
   const role = resolveDisplayRole(data.targetRole, normalizedRaw || normalizedCv, lang);
-  const enrichCtx = {language: lang, targetRole: role, displayName: name, experienceLevel: ''};
+  const enrichCtx = { language: lang, targetRole: role, displayName: name, experienceLevel: '' };
   const enriched = enrichParsedCv(parseCvSections(normalizedCv), normalizedRaw, data.skills, enrichCtx);
   const parsed = sanitizeParsedForTemplate(enriched, normalizedRaw, data.skills, enrichCtx);
   const contact = parseContactFields(parsed.contact);
@@ -56,7 +56,7 @@ export function CvTemplateDocument({data, profileImage, lang, compact = false}: 
     <div className="overflow-hidden rounded-sm border border-slate-300 bg-white font-sans shadow-sm">
       <header
         className="grid gap-3 overflow-hidden p-3 text-white sm:grid-cols-[auto_1fr_auto]"
-        style={{backgroundColor: CV_THEME.navy}}
+        style={{ backgroundColor: CV_THEME.navy }}
       >
         <div
           className={`flex ${photoSize} shrink-0 items-center justify-center overflow-hidden border-2 border-white bg-slate-400/40`}
@@ -95,7 +95,7 @@ export function CvTemplateDocument({data, profileImage, lang, compact = false}: 
       </header>
 
       <div className={`grid ${compact ? 'grid-cols-[38%_62%]' : 'grid-cols-[34%_66%]'}`}>
-        <aside className="space-y-5 p-3" style={{backgroundColor: CV_THEME.sidebar}}>
+        <aside className="space-y-5 p-3" style={{ backgroundColor: CV_THEME.sidebar }}>
           {contact.rest.filter((l) => l.length > 3 && l.length < 100).length ? (
             <SideSection title={t.personal} titleCls={titleCls} bodyCls={bodyCls}>
               <BulletList items={contact.rest} bodyCls={bodyCls} />
@@ -147,7 +147,7 @@ export function CvTemplateDocument({data, profileImage, lang, compact = false}: 
                 return (
                   <div key={i} className={`mb-3 ${bodyCls}`}>
                     <p className="font-bold text-slate-900">{job.title}</p>
-                    {job.company ? <p className="font-semibold" style={{color: CV_THEME.accent}}>{job.company}</p> : null}
+                    {job.company ? <p className="font-semibold" style={{ color: CV_THEME.accent }}>{job.company}</p> : null}
                     {job.body ? <p className="mt-1 text-slate-700">{job.body}</p> : null}
                   </div>
                 );
@@ -170,10 +170,10 @@ export function CvTemplateDocument({data, profileImage, lang, compact = false}: 
   );
 }
 
-function SideSection({title, titleCls, bodyCls, children}: {title: string; titleCls: string; bodyCls: string; children: ReactNode}) {
+function SideSection({ title, titleCls, bodyCls, children }: { title: string; titleCls: string; bodyCls: string; children: ReactNode }) {
   return (
     <section>
-      <h3 className={`border-b pb-1 font-black uppercase tracking-wide ${titleCls}`} style={{color: CV_THEME.navyLight, borderColor: CV_THEME.line}}>
+      <h3 className={`border-b pb-1 font-black uppercase tracking-wide ${titleCls}`} style={{ color: CV_THEME.navyLight, borderColor: CV_THEME.line }}>
         {title}
       </h3>
       <div className={`mt-2 ${bodyCls}`}>{children}</div>
@@ -181,10 +181,10 @@ function SideSection({title, titleCls, bodyCls, children}: {title: string; title
   );
 }
 
-function MainSection({title, titleCls, bodyCls, children}: {title: string; titleCls: string; bodyCls: string; children: ReactNode}) {
+function MainSection({ title, titleCls, bodyCls, children }: { title: string; titleCls: string; bodyCls: string; children: ReactNode }) {
   return (
     <section>
-      <h3 className={`border-b pb-1 font-black uppercase tracking-wide ${titleCls}`} style={{color: CV_THEME.navyLight, borderColor: CV_THEME.line}}>
+      <h3 className={`border-b pb-1 font-black uppercase tracking-wide ${titleCls}`} style={{ color: CV_THEME.navyLight, borderColor: CV_THEME.line }}>
         {title}
       </h3>
       <div className={`mt-2 ${bodyCls}`}>{children}</div>
@@ -192,7 +192,7 @@ function MainSection({title, titleCls, bodyCls, children}: {title: string; title
   );
 }
 
-function BulletList({items, bodyCls}: {items: string[]; bodyCls: string}) {
+function BulletList({ items, bodyCls }: { items: string[]; bodyCls: string }) {
   return (
     <ul className={`space-y-1 text-slate-700 ${bodyCls}`}>
       {items.slice(0, 14).map((item, i) => (

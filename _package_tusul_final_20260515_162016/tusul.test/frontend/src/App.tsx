@@ -14,6 +14,7 @@ import {
   Camera,
   Check,
   CheckCircle2,
+  ChevronDown,
   ClipboardCheck,
   Download,
   FileCheck2,
@@ -43,6 +44,7 @@ import {FeedbackSuggestionActions} from './components/FeedbackSuggestionActions'
 import {CvPreviewModal} from './components/CvPreviewModal';
 import {DashboardView} from './components/DashboardView';
 import {ExportPdfPreview} from './components/ExportPdfPreview';
+import {CareerRoadmapPanel} from './components/CareerRoadmapPanel';
 import {WorkflowStepper} from './components/WorkflowStepper';
 import type {WorkflowStepDef} from './components/WorkflowStepper';
 import {resolveCandidateName} from '@shared/cvSections';
@@ -87,6 +89,7 @@ type CvRecord = {
 
 type AnalysisResult = {
   language: Language;
+  analyzedAt: string;
   candidateName: string;
   targetRole: string;
   rewrittenCv: string;
@@ -167,6 +170,7 @@ const workflowSteps: WorkflowStepDef[] = [
 
 const defaultAnalysis: AnalysisResult = {
   language: 'mn',
+  analyzedAt: '',
   candidateName: '',
   targetRole: '',
   rewrittenCv: '',
@@ -298,11 +302,18 @@ function normalizeApiAnalysis(payload: any, lang: Language): AnalysisResult | nu
     });
   }
 
+  const analyzedAt = String(
+    data.metadata?.generatedAt ||
+      data.createdAt ||
+      payload.createdAt ||
+      new Date().toISOString(),
+  );
+
   const career = data.career || {
     currentLevel: data.experienceLevel || '',
     recommendedRoles: data.careerRecommendations || [],
     missingSkills: data.missingSkills || [],
-    roadmap: (data.careerRecommendations || []).map((r: string, i: number) => `${i + 1}. ${r}`),
+    roadmap: (data.cvImprovementSuggestions || data.careerRecommendations || []).map((r: string, i: number) => `Сар ${i + 1}: ${r}`),
     estimatedDuration: t('fallbackCareerDuration', lang),
   };
 
@@ -316,6 +327,7 @@ function normalizeApiAnalysis(payload: any, lang: Language): AnalysisResult | nu
   const cvTextForName = String(data.sourceCvText || payload.sourceCvText || data.rewrittenCv || '');
   return {
     language: responseLanguage,
+    analyzedAt,
     candidateName: resolveCandidateName({
       candidateName: data.candidateName || data.fullName || '',
       cvText: cvTextForName,
@@ -434,6 +446,7 @@ function normalizeDbAnalysis(
   return {
     cvId: record.id,
     analysis: {
+      analyzedAt: String(record.createdAt || a.metadata?.generatedAt || ''),
       candidateName: resolvedName,
       language: a.language === 'en' || record.language === 'en' ? 'en' : 'mn',
       targetRole: a.targetRole || record.jobDescription || '',
@@ -1835,18 +1848,21 @@ function RewriteView({analysis, lang, acceptFeedback, rejectFeedback, regenerate
 
 function InterviewView({analysis, lang}: {analysis: AnalysisResult; lang: Language}) {
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
-      <QuestionPanel title={t('technicalTitle', lang)} icon={BrainCircuit} items={analysis.interview.technical} lang={lang} />
-      <QuestionPanel title="HR" icon={UserRound} items={analysis.interview.hr} lang={lang} />
-      <QuestionPanel title={t('behavioralTitle', lang)} icon={MessageSquareText} items={analysis.interview.behavioral} lang={lang} />
-      <Panel title={t('answerStrategy', lang)} icon={BookOpenCheck}>
-        <Checklist items={analysis.interview.suggestedAnswers} title="STAR" positive />
-      </Panel>
+    <div className="space-y-5">
+      <InterviewQuestionGroup title={t('technicalTitle', lang)} icon={BrainCircuit} items={analysis.interview.technical} lang={lang} />
+      <InterviewQuestionGroup title="HR" icon={UserRound} items={analysis.interview.hr} lang={lang} />
+      <InterviewQuestionGroup title={t('behavioralTitle', lang)} icon={MessageSquareText} items={analysis.interview.behavioral} lang={lang} />
+      <InterviewQuestionGroup title={t('answerStrategy', lang)} icon={BookOpenCheck} items={analysis.interview.suggestedAnswers} lang={lang} />
     </div>
   );
 }
 
 function CareerView({analysis, lang}: {analysis: AnalysisResult; lang: Language}) {
+  const analyzedAt = analysis.analyzedAt ? new Date(analysis.analyzedAt) : null;
+  const daysPassed = analyzedAt ? Math.max(0, Math.floor((Date.now() - analyzedAt.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+  const monthIndex = Math.max(1, Math.floor(daysPassed / 30) + 1);
+  const totalRoadmap = Math.max(analysis.career.roadmap.length, 1);
+
   return (
     <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
       <Panel title={t('careerRecTitle', lang)} icon={GraduationCap}>
@@ -1855,22 +1871,21 @@ function CareerView({analysis, lang}: {analysis: AnalysisResult; lang: Language}
         <p className="mt-5 text-xs font-black uppercase text-slate-500">{t('estimatedDuration', lang)}</p>
         <p className="mt-2 rounded-lg bg-blue-50 px-4 py-3 text-sm font-black text-blue-800">{analysis.career.estimatedDuration || '--'}</p>
         <div className="mt-5">
-          <Checklist title={t('recommendedRoles', lang)} items={analysis.career.recommendedRoles} positive />
+          <Checklist items={analysis.career.recommendedRoles} positive />
+        </div>
+        <div className="mt-5">
+          <p className="mb-2 text-xs font-black uppercase text-slate-500">{t('missingSkillsTitle', lang)}</p>
+          <KeywordCloud items={analysis.career.missingSkills} tone="missing" />
         </div>
       </Panel>
       <div className="space-y-5">
-        <Panel title={t('missingSkillsTitle', lang)} icon={Target}>
-          <KeywordCloud items={analysis.career.missingSkills} tone="missing" />
-        </Panel>
         <Panel title={t('roadmapTitle', lang)} icon={GraduationCap}>
-          <div className="grid gap-3 md:grid-cols-2">
-            {analysis.career.roadmap.map((step, i) => (
-              <div key={step} className="rounded-lg border border-slate-200 bg-white p-4">
-                <div className="mb-3 flex size-9 items-center justify-center rounded-lg bg-brand-dark text-sm font-black text-white">{i + 1}</div>
-                <p className="text-sm leading-6 text-slate-700">{step}</p>
-              </div>
-            ))}
-          </div>
+          <CareerRoadmapPanel
+            steps={analysis.career.roadmap}
+            lang={lang}
+            daysPassed={daysPassed}
+            monthIndex={Math.min(monthIndex, totalRoadmap)}
+          />
         </Panel>
       </div>
     </div>
@@ -2214,6 +2229,97 @@ function QuestionPanel({title, icon, items, lang}: {title: string; icon: LucideI
               <p className="whitespace-pre-line text-sm leading-6 text-slate-700">{item}</p>
             </div>
           ))}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+type ParsedInterviewItem = {
+  question: string;
+  suggestion: string;
+};
+
+function parseInterviewItem(raw: string): ParsedInterviewItem {
+  const cleaned = raw.trim();
+  if (!cleaned) return {question: '', suggestion: ''};
+
+  const mnMatch = cleaned.match(/(?:^|\n)\s*Асуулт:\s*([\s\S]*?)(?:\n\s*Хариултын санаа:\s*([\s\S]*))?$/i);
+  if (mnMatch) {
+    return {
+      question: (mnMatch[1] || '').trim(),
+      suggestion: (mnMatch[2] || '').trim(),
+    };
+  }
+
+  const enMatch = cleaned.match(/(?:^|\n)\s*Question:\s*([\s\S]*?)(?:\n\s*Suggested answer:\s*([\s\S]*))?$/i);
+  if (enMatch) {
+    return {
+      question: (enMatch[1] || '').trim(),
+      suggestion: (enMatch[2] || '').trim(),
+    };
+  }
+
+  // Fallback format: "Асуулт ... ? - Хариулт ..."
+  const inlineQa = cleaned.match(/^(.+?\?)\s*[-–—:]\s*(.+)$/);
+  if (inlineQa) {
+    return {
+      question: inlineQa[1].trim(),
+      suggestion: inlineQa[2].trim(),
+    };
+  }
+
+  return {question: cleaned, suggestion: ''};
+}
+
+function InterviewQuestionGroup({
+  title,
+  icon: Icon,
+  items,
+  lang,
+}: {
+  title: string;
+  icon: LucideIcon;
+  items: string[];
+  lang: Language;
+}) {
+  const parsedItems = useMemo(() => items.map(parseInterviewItem).filter((it) => it.question), [items]);
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
+
+  return (
+    <Panel title={title} icon={Icon}>
+      {parsedItems.length === 0 ? (
+        <p className="text-sm text-slate-500">{t('noQuestions', lang)}</p>
+      ) : (
+        <div className="space-y-3">
+          {parsedItems.map((item, i) => {
+            const open = openIndex === i;
+            return (
+              <div key={`${title}-${i}`} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <button
+                  type="button"
+                  onClick={() => setOpenIndex((cur) => (cur === i ? null : i))}
+                  className="flex w-full items-start gap-3 px-4 py-3 text-left"
+                >
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-dark text-xs font-black text-white">{i + 1}</div>
+                  <p className="min-w-0 flex-1 text-sm font-semibold leading-6 text-slate-800">{item.question}</p>
+                  <ChevronDown size={18} className={`mt-1 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+                </button>
+                <div className="border-t border-slate-100 px-4 pb-4 pt-3 space-y-3">
+                  {open ? (
+                    <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-3">
+                      <p className="mb-1 text-xs font-black uppercase tracking-wide text-indigo-700">
+                        {lang === 'mn' ? 'Ингэж хариулж болно' : 'Suggested way to answer'}
+                      </p>
+                      <p className="whitespace-pre-line text-sm leading-6 text-indigo-900">
+                        {item.suggestion || (lang === 'mn' ? 'Энэ асуултад STAR бүтэц (Нөхцөл байдал - Даалгавар - Үйлдэл - Үр дүн)-аар хариулж болно.' : 'Answer this question using the STAR structure.')}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </Panel>

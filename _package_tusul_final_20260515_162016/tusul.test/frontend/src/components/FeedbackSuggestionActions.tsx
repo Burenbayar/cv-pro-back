@@ -1,6 +1,6 @@
-import {Check, RefreshCw, X} from 'lucide-react';
-import {t} from '../i18n';
-import type {Language} from '../i18n';
+import { Check, RefreshCw, X } from 'lucide-react';
+import { t } from '../i18n';
+import type { Language } from '../i18n';
 
 type FeedbackItem = {
   id: string;
@@ -18,7 +18,7 @@ type Props = {
 const btnBase =
   'flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-xs font-black uppercase';
 
-export function FeedbackSuggestionActions({item, lang, onAccept, onReject, onRegenerate}: Props) {
+export function FeedbackSuggestionActions({ item, lang, onAccept, onReject, onRegenerate }: Props) {
   if (item.status === 'accepted') {
     return (
       <div className={`mt-5 ${btnBase} bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200`}>

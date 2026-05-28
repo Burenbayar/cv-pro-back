@@ -727,6 +727,7 @@ async function requestOpenAiAnalysis(request: ReturnType<typeof normalizeRequest
         'Do not invent employers, dates, degrees, certifications, or private facts.',
         'Extract cvProfile ONLY from the CV. The candidate profession must match the CV (e.g. accountant CV must stay accounting — never label an accountant as software engineer).',
         'Job requirements are separate: use them to tailor summary and skills, not to replace the candidate profession.',
+        'Use supportive, advisory tone for roadmap and recommendations (e.g., "хийгээрэй", "бэлдээрэй"), not commanding tone.',
         'Do not invent employers, dates, degrees, certifications, or private facts.',
         'rewrittenCv must match cvProfile sections with headers when language is mn: ХОЛБОО БАРИХ, СОНИРХОЛ, УР ЧАДВАР, ХЭЛ, МИНИЙ ТУХАЙ, БОЛОВСРОЛ, АЖЛЫН ТУРШЛАГА.',
       ].join(' '),
@@ -741,6 +742,7 @@ async function requestOpenAiAnalysis(request: ReturnType<typeof normalizeRequest
         '',
         'Fill cvProfile from the CV. Write summary in first person (start with «Миний бие» when language is mn). Put languages only in languages array, not skills.',
         'Analyze skills, experience level, weak points, missing skills, ATS score, recommendations, CV improvements, and rewrite the CV.',
+        'For roadmap and recommendations in Mongolian, prefer friendly advisory wording like "хийгээрэй", "сайжруулаарай", "бэлдээрэй".',
         'For rewrittenCv: produce a complete polished CV draft using only facts from the uploaded CV. Improve structure, professional summary, skills grouping, experience bullets, project descriptions, ATS keywords, grammar, and recruiter readability. Start bullets with strong action verbs. Add measurable impact only when evidence exists; otherwise improve clarity without fabricating numbers. Preserve names, contacts, employers, dates, degrees, and certifications exactly when present.',
         'Return 4 to 6 cvImprovementSuggestions and 4 to 6 careerRecommendations.',
         'Return interview prep immediately: 4 technical Q&A items, 3 HR Q&A items, 3 behavioral Q&A items, and 4 suggested answer strategies. Each question item should include both the interview question and a concise suggested answer tailored to this CV and target role.',
@@ -1048,6 +1050,59 @@ function findSuggestionForUser(db: Database, suggestionId: string, userId: strin
   return {item: null, suggestion: null};
 }
 
+function buildCareerRoadmap(result: CareerAnalysis, language: Language): string[] {
+  const prefix = language === 'mn' ? 'Сар' : 'Month';
+  const steps: string[] = [];
+  const primaryRole = result.targetRole.trim() || (language === 'mn' ? 'зорилтот мэргэжил' : 'target role');
+  const missing = result.missingSkills.slice(0, 3);
+  const improvements = result.cvImprovementSuggestions.slice(0, 3);
+  const recommendations = result.careerRecommendations.slice(0, 2);
+
+  steps.push(
+    language === 'mn'
+      ? `${prefix} 1: ${primaryRole} чиглэлд хэрэгтэй гол ур чадваруудаас ${missing[0] || 'нэг чухал чадвар'} дээр төвлөрч, долоо хоног бүр бодит дасгал хийгээрэй.`
+      : `${prefix} 1: Focus on ${missing[0] || 'one core skill'} needed for ${primaryRole} and practice it weekly with real tasks.`,
+  );
+
+  if (improvements[0]) {
+    steps.push(
+      language === 'mn'
+        ? `${prefix} 2: "${improvements[0]}" дээр тулгуурлан CV-ийн тухайн хэсгийг шинэчлээд 2 хувилбар бэлдээрэй.`
+        : `${prefix} 2: Update your CV section based on "${improvements[0]}" and prepare two improved variants.`,
+    );
+  }
+
+  steps.push(
+    language === 'mn'
+      ? `${prefix} 3: Ажлын туршлага бүрийг хэмжигдэхүйц үр дүнтэй (тоо, хувь, хугацаа) 1-2 bullet болгон сайжруулаарай.`
+      : `${prefix} 3: Rewrite each experience entry with measurable impact (numbers, percentages, time).`,
+  );
+
+  if (missing[1]) {
+    steps.push(
+      language === 'mn'
+        ? `${prefix} 4: ${missing[1]} чадварыг бататгахын тулд жижиг төсөл/кейс хийж GitHub эсвэл portfolio-д нэмээрэй.`
+        : `${prefix} 4: Build a small project/case for ${missing[1]} and add it to your portfolio.`,
+    );
+  }
+
+  if (improvements[1]) {
+    steps.push(
+      language === 'mn'
+        ? `${prefix} 5: "${improvements[1]}" саналын дагуу ATS түлхүүр үгсийг ажлын зарын хэллэгтэй тааруулж CV-д шингээгээрэй.`
+        : `${prefix} 5: Apply "${improvements[1]}" to align ATS keywords with job requirement language.`,
+    );
+  }
+
+  steps.push(
+    language === 'mn'
+      ? `${prefix} 6: Mock interview хийж, ${recommendations[0] || 'зорилтот үүрэг'} рүү өргөдөл өгөөд сар бүр ахиц (ур чадвар, ярилцлага, санал)-аа тэмдэглээрэй.`
+      : `${prefix} 6: Run mock interviews, apply for ${recommendations[0] || 'target roles'}, and track monthly progress.`,
+  );
+
+  return steps.slice(0, 6);
+}
+
 function toDashboardAnalysis(result: CareerAnalysis) {
   const language = result.metadata?.language === 'en' ? 'en' : 'mn';
   const copy = language === 'mn'
@@ -1111,7 +1166,7 @@ function toDashboardAnalysis(result: CareerAnalysis) {
       currentLevel: result.experienceLevel,
       recommendedRoles: result.careerRecommendations.slice(0, 3),
       missingSkills: result.missingSkills,
-      roadmap: result.cvImprovementSuggestions,
+      roadmap: buildCareerRoadmap(result, language),
       estimatedDuration: copy.estimatedDuration,
     },
   };
