@@ -1,6 +1,7 @@
 import type {ReactNode} from 'react';
 import {enrichParsedCv, parseCvSections, resolveCandidateName, type CvLanguage} from '@shared/cvSections';
 import {normalizeCvTextForParse, sanitizeParsedForTemplate} from '@shared/cvTemplateSanitize';
+import {resolveDisplayRole} from '@shared/cvProfession';
 import {
   CV_THEME,
   parseContactFields,
@@ -38,7 +39,7 @@ export function CvTemplateDocument({data, profileImage, lang, compact = false}: 
       cvText: normalizedRaw || normalizedCv,
       fullName: data.accountFullName || data.candidateName,
     }) || tr('previewNameFallback', lang);
-  const role = data.targetRole.trim() || tr('templateRoleFallback', lang);
+  const role = resolveDisplayRole(data.targetRole, normalizedRaw || normalizedCv, lang);
   const enrichCtx = {language: lang, targetRole: role, displayName: name, experienceLevel: ''};
   const enriched = enrichParsedCv(parseCvSections(normalizedCv), normalizedRaw, data.skills, enrichCtx);
   const parsed = sanitizeParsedForTemplate(enriched, normalizedRaw, data.skills, enrichCtx);
@@ -71,27 +72,31 @@ export function CvTemplateDocument({data, profileImage, lang, compact = false}: 
           <p className={`mt-0.5 truncate font-semibold text-blue-100 ${compact ? 'text-[9px]' : 'text-xs'}`}>{role}</p>
           <p className={`mt-0.5 text-blue-200/90 ${compact ? 'text-[8px]' : 'text-[10px]'}`}>{t.cv}</p>
         </div>
-        <div className={`min-w-[100px] space-y-1.5 text-right ${compact ? 'text-[8px]' : 'text-[10px]'}`}>
+        <div className={`min-w-[108px] max-w-[42%] shrink-0 space-y-2 text-right ${compact ? 'text-[8px]' : 'text-[10px]'}`}>
           {contact.phone ? (
-            <p>
-              <span className="font-bold text-blue-200">{t.phone}</span>
-              <br />
-              <span className="text-white">{contact.phone}</span>
+            <p className="leading-snug">
+              <span className="block font-bold text-blue-200">{t.phone}</span>
+              <span className="block whitespace-nowrap text-white">{contact.phone}</span>
             </p>
           ) : null}
           {contact.email ? (
-            <p>
-              <span className="font-bold text-blue-200">{t.email}</span>
-              <br />
-              <span className="break-all text-white">{contact.email}</span>
+            <p className="leading-snug">
+              <span className="block font-bold text-blue-200">{t.email}</span>
+              <span className="block break-all text-white">{contact.email}</span>
+            </p>
+          ) : null}
+          {contact.location ? (
+            <p className="leading-snug">
+              <span className="block font-bold text-blue-200">{t.address}</span>
+              <span className="block text-white">{contact.location}</span>
             </p>
           ) : null}
         </div>
       </header>
 
       <div className={`grid ${compact ? 'grid-cols-[38%_62%]' : 'grid-cols-[34%_66%]'}`}>
-        <aside className="space-y-4 p-3" style={{backgroundColor: CV_THEME.sidebar}}>
-          {contact.rest.length ? (
+        <aside className="space-y-5 p-3" style={{backgroundColor: CV_THEME.sidebar}}>
+          {contact.rest.filter((l) => l.length > 3 && l.length < 100).length ? (
             <SideSection title={t.personal} titleCls={titleCls} bodyCls={bodyCls}>
               <BulletList items={contact.rest} bodyCls={bodyCls} />
             </SideSection>
@@ -101,6 +106,11 @@ export function CvTemplateDocument({data, profileImage, lang, compact = false}: 
               <BulletList items={parsed.languages} bodyCls={bodyCls} />
             </SideSection>
           ) : null}
+          {parsed.hobbies.length ? (
+            <SideSection title={t.hobbies} titleCls={titleCls} bodyCls={bodyCls}>
+              <BulletList items={parsed.hobbies} bodyCls={bodyCls} />
+            </SideSection>
+          ) : null}
           {parsed.skills.length ? (
             <SideSection title={t.skills} titleCls={titleCls} bodyCls={bodyCls}>
               <BulletList items={parsed.skills} bodyCls={bodyCls} />
@@ -108,7 +118,7 @@ export function CvTemplateDocument({data, profileImage, lang, compact = false}: 
           ) : null}
         </aside>
 
-        <main className="space-y-4 bg-white p-3">
+        <main className="space-y-5 bg-white p-3">
           {summary ? (
             <MainSection title={t.about} titleCls={titleCls} bodyCls={bodyCls}>
               <p className={`text-slate-700 ${bodyCls}`}>{summary}</p>

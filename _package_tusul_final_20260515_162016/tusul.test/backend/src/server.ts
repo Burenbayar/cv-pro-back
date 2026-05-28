@@ -14,9 +14,13 @@ import {
   parseCvSections,
   resolveCandidateName,
 } from './lib/cvSections.js';
-import {buildProfessionalAbout} from './lib/cvProfessionalSummary.js';
+import {buildProfessionalAbout, convertToFirstPersonMn} from './lib/cvProfessionalSummary.js';
+import {logAiResponse} from './lib/aiDebugLog.js';
+import {isTechCv, resolveDisplayRole} from './lib/cvProfession.js';
 import {createProfessionalCvPdf} from './lib/professionalCvPdf.js';
+import {cvProfileJsonSchema, mergeAnalysisWithCvProfile} from './lib/cvProfile.js';
 import {applyCors, isCorsConfigured} from './lib/cors.js';
+import {extractOpenAiResponseText, formatOpenAiHttpError} from './lib/openaiResponse.js';
 
 const backendRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 dotenv.config({path: path.join(backendRoot, '.env')});
@@ -439,6 +443,20 @@ function isQualityAiRewrittenCv(rewrittenCv: string, sourceCvText: string): bool
   return hasStructure && hasContent;
 }
 
+function sanitizeSummaryForCv(summary: string, cvText: string, language: Language, displayName: string): string {
+  let s = String(summary || '').trim();
+  if (!s) return s;
+  const accounting = /нягтлан|бүртгэл|accountant|санхүү/i.test(cvText);
+  const tech = isTechCv(cvText);
+  if (accounting && !tech) {
+    s = s
+      .replace(/систем\s*хөгжүүлэх|software\s*engineer|IT\s*салбар|программ\s*ханга/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+  return language === 'mn' ? convertToFirstPersonMn(s, displayName) : s;
+}
+
 function finalizeRewrittenCv(
   rewrittenCv: string,
   request: ReturnType<typeof normalizeRequest>,
@@ -451,12 +469,13 @@ function finalizeRewrittenCv(
   if (!sourceText) return rewrittenCv.trim();
 
   const nameFromCv = resolveCandidateName({candidateName: '', cvText: sourceText, fullName: request.fullName});
+  const displayRole = resolveDisplayRole(request.targetRole, sourceText, request.language);
 
   let cv = isQualityAiRewrittenCv(rewrittenCv, sourceText)
     ? mergeContactIntoCv(rewrittenCv.trim(), sourceText, request.language)
     : buildImprovedCvFromSource({
         fullName: nameFromCv,
-        targetRole: request.targetRole,
+        targetRole: displayRole,
         cvText: sourceText,
         skills,
         summary,
@@ -466,7 +485,7 @@ function finalizeRewrittenCv(
 
   const professionalAbout = buildProfessionalAbout({
     cvText: sourceText,
-    targetRole: request.targetRole,
+    targetRole: displayRole,
     displayName: nameFromCv,
     experienceLevel,
     careerGoals: request.careerGoals,
@@ -534,6 +553,7 @@ const careerAnalysisSchema = {
     'rewrittenCv',
     'summary',
     'interview',
+    'cvProfile',
   ],
   properties: {
     candidateName: {type: 'string'},
@@ -558,38 +578,39 @@ const careerAnalysisSchema = {
         suggestedAnswers: {type: 'array', items: {type: 'string'}},
       },
     },
+    cvProfile: cvProfileJsonSchema,
   },
 };
 
 function normalizeAnalysis(input: any, language: Language, source: string): CareerAnalysis {
+  const merged = mergeAnalysisWithCvProfile(input as Record<string, unknown>, language);
+  const meta = (input.metadata ?? merged.metadata) as
+    | {provider?: string; fallbackReason?: string}
+    | undefined;
   const base = {
-    candidateName: String(input.candidateName || 'Candidate'),
-    targetRole: String(input.targetRole || 'Generalist'),
-    skills: toStringArray(input.skills),
-    experienceLevel: String(input.experienceLevel || 'Junior'),
-    atsScore: Math.max(0, Math.min(100, Math.round(Number(input.atsScore || 0)))),
-    weakPoints: toStringArray(input.weakPoints),
-    missingSkills: toStringArray(input.missingSkills),
-    careerRecommendations: toStringArray(input.careerRecommendations),
-    cvImprovementSuggestions: toStringArray(input.cvImprovementSuggestions),
-    rewrittenCv: String(input.rewrittenCv || ''),
-    summary: String(input.summary || ''),
+    candidateName: String(merged.candidateName || 'Candidate'),
+    targetRole: String(merged.targetRole || input.targetRole || 'Generalist'),
+    skills: toStringArray(merged.skills),
+    experienceLevel: String(merged.experienceLevel || input.experienceLevel || 'Junior'),
+    atsScore: Math.max(0, Math.min(100, Math.round(Number(merged.atsScore || input.atsScore || 0)))),
+    weakPoints: toStringArray(merged.weakPoints),
+    missingSkills: toStringArray(merged.missingSkills),
+    careerRecommendations: toStringArray(merged.careerRecommendations),
+    cvImprovementSuggestions: toStringArray(merged.cvImprovementSuggestions),
+    rewrittenCv: String(merged.rewrittenCv || ''),
+    summary: String(merged.summary || ''),
   };
-  const interview = normalizeInterview(input.interview, buildInterviewPrep(base, language));
+  const interview = normalizeInterview(merged.interview ?? input.interview, buildInterviewPrep(base, language));
 
   return {
     ...base,
     interview,
     metadata: {
       provider:
-        input.metadata?.provider === 'gemini'
-          ? 'gemini'
-          : input.metadata?.provider === 'openai'
-            ? 'openai'
-            : 'simulated',
+        meta?.provider === 'gemini' ? 'gemini' : meta?.provider === 'openai' ? 'openai' : 'simulated',
       source,
       language,
-      fallbackReason: input.metadata?.fallbackReason,
+      fallbackReason: meta?.fallbackReason,
     },
   };
 }
@@ -675,6 +696,8 @@ async function requestGeminiAnalysis(
     return null;
   }
 
+  logAiResponse('gemini', 'raw JSON', data);
+
   return normalizeAnalysis(
     {
       ...data,
@@ -702,17 +725,21 @@ async function requestOpenAiAnalysis(request: ReturnType<typeof normalizeRequest
           : 'Write every human-readable value in natural, professional English.',
         'Keep JSON keys in English.',
         'Do not invent employers, dates, degrees, certifications, or private facts.',
-        'Analyze ONLY the CV text below. rewrittenCv must be a complete NEW improved CV document from that text, with Mongolian section headers when language is mn: ХОЛБОО БАРИХ, БОЛОВСРОЛ, УР ЧАДВАР, МИНИЙ ТУХАЙ, АЖЛЫН ТУРШЛАГА.',
+        'Extract cvProfile ONLY from the CV. The candidate profession must match the CV (e.g. accountant CV must stay accounting — never label an accountant as software engineer).',
+        'Job requirements are separate: use them to tailor summary and skills, not to replace the candidate profession.',
+        'Do not invent employers, dates, degrees, certifications, or private facts.',
+        'rewrittenCv must match cvProfile sections with headers when language is mn: ХОЛБОО БАРИХ, СОНИРХОЛ, УР ЧАДВАР, ХЭЛ, МИНИЙ ТУХАЙ, БОЛОВСРОЛ, АЖЛЫН ТУРШЛАГА.',
       ].join(' '),
     },
     {
       role: 'user',
       content: [
         `Candidate name: ${request.fullName}`,
-        `Target role: ${request.targetRole}`,
+        `Target role / job requirements: ${request.targetRole}`,
         `Reported years of experience: ${request.experienceYears}`,
         `Career goals: ${request.careerGoals || 'Not provided'}`,
         '',
+        'Fill cvProfile from the CV. Write summary in first person (start with «Миний бие» when language is mn). Put languages only in languages array, not skills.',
         'Analyze skills, experience level, weak points, missing skills, ATS score, recommendations, CV improvements, and rewrite the CV.',
         'For rewrittenCv: produce a complete polished CV draft using only facts from the uploaded CV. Improve structure, professional summary, skills grouping, experience bullets, project descriptions, ATS keywords, grammar, and recruiter readability. Start bullets with strong action verbs. Add measurable impact only when evidence exists; otherwise improve clarity without fabricating numbers. Preserve names, contacts, employers, dates, degrees, and certifications exactly when present.',
         'Return 4 to 6 cvImprovementSuggestions and 4 to 6 careerRecommendations.',
@@ -724,7 +751,8 @@ async function requestOpenAiAnalysis(request: ReturnType<typeof normalizeRequest
   ];
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), Number(process.env.OPENAI_TIMEOUT_MS || 30000));
+  const timeoutMs = Number(process.env.OPENAI_TIMEOUT_MS || 120000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch('https://api.openai.com/v1/responses', {
@@ -736,7 +764,7 @@ async function requestOpenAiAnalysis(request: ReturnType<typeof normalizeRequest
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
         input,
-        max_output_tokens: Number(process.env.OPENAI_MAX_OUTPUT_TOKENS || 4000),
+        max_output_tokens: Number(process.env.OPENAI_MAX_OUTPUT_TOKENS || 8192),
         text: {
           format: {
             type: 'json_schema',
@@ -749,23 +777,45 @@ async function requestOpenAiAnalysis(request: ReturnType<typeof normalizeRequest
       signal: controller.signal,
     });
 
-    if (!response.ok) return null;
-    const data = (await response.json()) as {
-      output_text?: string;
-      output?: Array<{content?: Array<{type?: string; text?: string}>}>;
-    };
-    const outputText = typeof data.output_text === 'string'
-      ? data.output_text
-      : (data.output || [])
-          .flatMap((item: any) => item.content || [])
-          .filter((item: any) => item.type === 'output_text' && item.text)
-          .map((item: any) => item.text)
-          .join('\n');
+    const data = (await response.json()) as Parameters<typeof extractOpenAiResponseText>[0];
+    if (!response.ok) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error(`[OpenAI] ${formatOpenAiHttpError(response.status, data)}`);
+      }
+      return null;
+    }
 
-    if (!outputText) return null;
+    if (data.status === 'incomplete') {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[OpenAI] Response incomplete (increase OPENAI_MAX_OUTPUT_TOKENS)');
+      }
+      return null;
+    }
+
+    const outputText = extractOpenAiResponseText(data);
+    if (!outputText) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[OpenAI] Empty output text in response');
+      }
+      return null;
+    }
+
     const parsed = JSON.parse(outputText);
-    return normalizeAnalysis({...parsed, metadata: {provider: 'openai'}}, request.language, source);
-  } catch {
+    logAiResponse('openai', 'raw JSON', parsed);
+    const normalized = normalizeAnalysis({...parsed, metadata: {provider: 'openai'}}, request.language, source);
+    logAiResponse('openai', 'normalized (rewrittenCv excerpt)', {
+      candidateName: normalized.candidateName,
+      targetRole: normalized.targetRole,
+      summary: normalized.summary,
+      skills: normalized.skills,
+      rewrittenCv: normalized.rewrittenCv.slice(0, 2000),
+    });
+    return normalized;
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      const message = error instanceof Error ? error.message : 'OPENAI_FAILED';
+      console.error(`[OpenAI] ${message}`);
+    }
     return null;
   } finally {
     clearTimeout(timeout);
@@ -786,17 +836,52 @@ async function analyzeCvPayload(req: Request) {
 
   const file = (req as any).file;
   const cvFileName = file?.originalname || (cvText ? 'cv-text.txt' : 'cv.txt');
-  const useGemini = Boolean(process.env.GEMINI_API_KEY?.trim());
-  let result: CareerAnalysis;
+  const aiProvider = (process.env.AI_PROVIDER || 'auto').trim().toLowerCase();
+  const hasGemini = aiProvider !== 'openai' && Boolean(process.env.GEMINI_API_KEY?.trim());
+  const hasOpenAi = aiProvider !== 'gemini' && Boolean(process.env.OPENAI_API_KEY?.trim());
+  let result: CareerAnalysis | null = null;
+  let fallbackReason: string | undefined;
 
-  if (useGemini) {
-    const geminiResult = await requestGeminiAnalysis(request, cvText, source, cvFileName);
-    result = geminiResult || buildSimulatedAnalysis(request, cvText, source);
-    if (!geminiResult) result.metadata.fallbackReason = 'GEMINI_FALLBACK';
+  if (aiProvider === 'openai' && !hasOpenAi) {
+    throw new ApiError('AI_CONFIG', 'AI_PROVIDER=openai but OPENAI_API_KEY is missing.', 503);
+  }
+
+  if (aiProvider === 'openai') {
+    result = await requestOpenAiAnalysis(request, cvText, source);
+    if (!result) fallbackReason = 'OPENAI_FAILED';
+  } else if (aiProvider === 'gemini') {
+    result = await requestGeminiAnalysis(request, cvText, source, cvFileName);
+    if (!result) fallbackReason = 'GEMINI_FAILED';
   } else {
-    const openAiResult = await requestOpenAiAnalysis(request, cvText, source);
-    result = openAiResult || buildSimulatedAnalysis(request, cvText, source);
-    if (!openAiResult && process.env.OPENAI_API_KEY) result.metadata.fallbackReason = 'OPENAI_FALLBACK';
+    if (hasGemini) {
+      result = await requestGeminiAnalysis(request, cvText, source, cvFileName);
+      if (!result) fallbackReason = 'GEMINI_FAILED';
+    }
+    if (!result && hasOpenAi) {
+      result = await requestOpenAiAnalysis(request, cvText, source);
+      if (result && fallbackReason) {
+        fallbackReason = 'GEMINI_FALLBACK_OPENAI';
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[AI] Using OpenAI after Gemini unavailable');
+        }
+      } else if (!result && fallbackReason) {
+        fallbackReason = 'GEMINI_AND_OPENAI_FAILED';
+      } else if (!result) {
+        fallbackReason = 'OPENAI_FAILED';
+      }
+    }
+  }
+
+  if (!result) {
+    result = buildSimulatedAnalysis(request, cvText, source);
+    fallbackReason = fallbackReason ? `${fallbackReason}_SIMULATED` : 'SIMULATED_ONLY';
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`[AI] Simulated analysis only (${fallbackReason})`);
+    }
+  }
+
+  if (fallbackReason) {
+    result.metadata = {...result.metadata, fallbackReason};
   }
 
   const nameFromCv = resolveCandidateName({
@@ -808,8 +893,17 @@ async function analyzeCvPayload(req: Request) {
     ...result,
     rewrittenCv: finalizeRewrittenCv(result.rewrittenCv, request, cvText, result.skills, result.summary, result.experienceLevel),
     candidateName: nameFromCv,
-    targetRole: result.targetRole || request.targetRole,
+    targetRole: resolveDisplayRole(result.targetRole || request.targetRole, cvText, request.language),
+    summary: sanitizeSummaryForCv(result.summary, cvText, request.language, nameFromCv),
   };
+
+  logAiResponse(result.metadata?.provider || 'analysis', 'final result', {
+    provider: result.metadata?.provider,
+    candidateName: result.candidateName,
+    targetRole: result.targetRole,
+    summary: result.summary,
+    rewrittenCv: result.rewrittenCv,
+  });
 
   const persistAnalysis = String(req.body.persist ?? 'true') !== 'false';
   const user = getAuthUser(req);
@@ -1028,11 +1122,13 @@ app.get('/api/health', (_req, res) => {
     status: 'ok',
     api: 'AI Career Advisor',
     corsConfigured: isCorsConfigured(),
-    aiProvider: process.env.GEMINI_API_KEY
-      ? 'gemini'
-      : process.env.OPENAI_API_KEY
-        ? 'openai'
-        : 'simulated',
+    aiProvider: (() => {
+      const mode = (process.env.AI_PROVIDER || 'auto').trim().toLowerCase();
+      if (mode === 'openai' || mode === 'gemini') return mode;
+      if (process.env.GEMINI_API_KEY?.trim()) return 'gemini';
+      if (process.env.OPENAI_API_KEY?.trim()) return 'openai';
+      return 'simulated';
+    })(),
     uptimeMs: Math.round(process.uptime() * 1000),
   });
 });

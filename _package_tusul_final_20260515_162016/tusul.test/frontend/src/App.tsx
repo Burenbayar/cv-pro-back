@@ -14,7 +14,6 @@ import {
   Camera,
   Check,
   CheckCircle2,
-  ChevronDown,
   ClipboardCheck,
   Download,
   FileCheck2,
@@ -40,6 +39,7 @@ import {
 } from 'lucide-react';
 import type {LucideIcon} from 'lucide-react';
 import {CvExportImprovements} from './components/CvExportImprovements';
+import {FeedbackSuggestionActions} from './components/FeedbackSuggestionActions';
 import {CvPreviewModal} from './components/CvPreviewModal';
 import {DashboardView} from './components/DashboardView';
 import {ExportPdfPreview} from './components/ExportPdfPreview';
@@ -618,7 +618,7 @@ export default function App() {
     try {
       const formData = new FormData();
       formData.append('cvText', cvText);
-      formData.append('targetRole', analysis.targetRole || jobDescription || 'Software Engineer');
+      formData.append('targetRole', analysis.targetRole || jobDescription || '');
       formData.append('language', nextLang);
       formData.append('persist', 'false');
       if (user.fullName) formData.append('fullName', user.fullName);
@@ -810,7 +810,7 @@ export default function App() {
       const formData = new FormData();
       if (selectedFile) formData.append('cvFile', selectedFile);
       formData.append('cvText', rawText);
-      formData.append('targetRole', jobDescription || 'Software Engineer');
+      formData.append('targetRole', jobDescription.trim());
       formData.append('language', lang);
       if (user?.fullName) formData.append('fullName', user.fullName);
 
@@ -843,7 +843,6 @@ export default function App() {
             fullName: user?.fullName || '',
           }) || normalized.candidateName;
         setAnalysis(normalized);
-        nextView = 'rewrite';
         if (payload.cvId) setCurrentCvId(payload.cvId);
         const newOverall = calculateOverall(normalized.scores);
         const newRecord: CvRecord = {
@@ -1168,7 +1167,15 @@ export default function App() {
                 runAnalysis={runAnalysis}
               />
             )}
-            {activeView === 'analysis' && <AnalysisView analysis={analysis} overall={overall} lang={lang} onReanalyze={() => navigateTo('upload')} onExport={() => navigateTo('rewrite')} />}
+            {activeView === 'analysis' && (
+              <AnalysisView
+                analysis={analysis}
+                overall={overall}
+                lang={lang}
+                onReanalyze={() => navigateTo('upload')}
+                onExport={() => navigateTo('rewrite')}
+              />
+            )}
             {activeView === 'rewrite' && (
               <RewriteView
                 analysis={analysis}
@@ -1536,7 +1543,7 @@ function UploadView({lang, copy, selectedFile, uploadError, rawText, jobDescript
         </div>
 
         <button
-          className="mt-5 flex w-full items-center justify-center gap-3 rounded-lg bg-blue-700 px-6 py-4 text-sm font-black text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-primary mt-5 flex w-full items-center justify-center gap-3 rounded-lg px-6 py-4 text-sm font-black"
           disabled={isProcessing} onClick={runAnalysis} type="button">
           {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <BrainCircuit size={20} />}
           {isProcessing ? getStatusText(processingStatus, lang) : copy.analyze}
@@ -1761,7 +1768,7 @@ function AnalysisView({analysis, overall, lang, onReanalyze, onExport}: {
             </button>
             <button
               onClick={onExport}
-              className="rounded-xl bg-indigo-600 px-4 py-3 text-sm font-black text-white hover:bg-indigo-500"
+              className="btn-primary rounded-xl px-4 py-3 text-sm font-black"
               type="button"
             >
               {t('buildCvBtn', lang)}
@@ -1769,6 +1776,7 @@ function AnalysisView({analysis, overall, lang, onReanalyze, onExport}: {
           </div>
         </aside>
       </div>
+
     </div>
   );
 }
@@ -1789,25 +1797,18 @@ function RewriteView({analysis, lang, acceptFeedback, rejectFeedback, regenerate
         ) : (
           <div className="grid gap-4 xl:grid-cols-3">
             {analysis.feedback.map((item) => (
-              <FeedbackCard key={item.id} item={item} lang={lang}
+              <FeedbackCard
+                key={item.id}
+                item={item}
+                lang={lang}
                 actions={
-                  <div className="mt-5 flex flex-col gap-2 sm:flex-row xl:flex-col 2xl:flex-row">
-                    <button
-                      className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-3 text-xs font-black uppercase text-white hover:bg-emerald-600 disabled:opacity-50"
-                      disabled={item.status === 'accepted'} onClick={() => acceptFeedback(item.id)} type="button">
-                      <Check size={15} /> {item.status === 'accepted' ? t('acceptedBtn', lang) : t('acceptBtn', lang)}
-                    </button>
-                    <button
-                      className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-brand-bg"
-                      onClick={() => regenerateFeedback(item.id)} type="button">
-                      <RefreshCw size={15} /> {t('regenBtn', lang)}
-                    </button>
-                    <button
-                      className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-rose-200 px-4 py-3 text-xs font-black uppercase text-rose-700 hover:bg-rose-50"
-                      onClick={() => rejectFeedback(item.id)} type="button">
-                      <X size={15} /> {t('rejectBtn', lang)}
-                    </button>
-                  </div>
+                  <FeedbackSuggestionActions
+                    item={item}
+                    lang={lang}
+                    onAccept={acceptFeedback}
+                    onReject={rejectFeedback}
+                    onRegenerate={regenerateFeedback}
+                  />
                 }
               />
             ))}
@@ -1816,10 +1817,10 @@ function RewriteView({analysis, lang, acceptFeedback, rejectFeedback, regenerate
       </Panel>
 
       {onContinue && (
-        <div className="flex justify-end">
+        <div className="flex w-full justify-stretch sm:justify-end">
           <button
             onClick={onContinue}
-            className="flex items-center gap-3 rounded-xl bg-indigo-600 px-8 py-4 text-sm font-black text-white hover:bg-indigo-500 active:scale-[.98] transition-transform"
+            className="btn-primary flex w-full items-center justify-center gap-3 rounded-xl px-8 py-4 text-sm font-black active:scale-[.98] transition-transform sm:w-auto"
             type="button"
           >
             <Download size={18} />
@@ -1891,67 +1892,31 @@ function ExportView({
   cvSessionKey: string;
   exportOptimizedCv: () => Promise<void>;
 }) {
+  const templateData = buildCvPreviewData(analysis, accountFullName);
+
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      {/* CV Preview — shown ABOVE the download button */}
       <Panel title={t('previewPanelTitle', lang)} icon={FileCheck2}>
-        <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
-          {/* Navy sidebar + content layout mimicking the exported PDF */}
-          <div className="flex min-h-[420px]">
-            {/* Sidebar */}
-            <div className="w-44 shrink-0 bg-slate-900 p-5 text-white">
-              <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-white/10 text-2xl font-black text-white">
-                {(analysis.candidateName || 'C').charAt(0).toUpperCase()}
-              </div>
-              <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t('previewRoleLabel', lang)}</p>
-              <p className="mt-1 text-sm font-bold text-slate-100 leading-5">{analysis.targetRole || '—'}</p>
-
-              {analysis.keywords.recommended.length > 0 && (
-                <div className="mt-5">
-                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t('previewSkillsLabel', lang)}</p>
-                  <div className="mt-2 space-y-1">
-                    {analysis.keywords.recommended.slice(0, 6).map((kw) => (
-                      <p key={kw} className="text-xs font-medium text-slate-300">{kw}</p>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Main content */}
-            <div className="flex-1 p-6">
-              <p className="text-xl font-black text-brand-dark">{analysis.candidateName || t('previewNameFallback', lang)}</p>
-
-              <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-blue-600">{t('previewSummaryTitle', lang)}</p>
-              <p className="mt-1 text-xs leading-5 text-brand-mid">{analysis.summary || t('previewSummaryFallback', lang)}</p>
-
-              {analysis.rewrittenCv.trim() && (
-                <>
-                  <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-blue-600">{t('previewRewrittenTitle', lang)}</p>
-                  <pre className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-700 line-clamp-6">{analysis.rewrittenCv.slice(0, 400)}{analysis.rewrittenCv.length > 400 ? '…' : ''}</pre>
-                </>
-              )}
-
-              {analysis.strengths.length > 0 && (
-                <div className="mt-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">{t('previewStrengthsTitle', lang)}</p>
-                  <div className="mt-1 space-y-0.5">
-                    {analysis.strengths.slice(0, 3).map((s) => (
-                      <p key={s} className="text-xs text-brand-mid">• {s}</p>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <p className="mt-3 text-xs text-slate-400 text-center">{t('previewNote', lang)}</p>
+        {analysis.summary ? (
+          <p className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm leading-6 text-indigo-950">
+            <span className="font-black">{t('previewSummaryTitle', lang)}: </span>
+            {analysis.summary}
+          </p>
+        ) : null}
+        <ExportPdfPreview
+          key={cvSessionKey}
+          analysis={templateData}
+          profileImage={profileImage}
+          lang={lang}
+          size="md"
+        />
+        <p className="mt-3 text-center text-xs text-slate-400">{t('previewNote', lang)}</p>
       </Panel>
 
       {/* Download button — BELOW the preview */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <button
-          className="flex w-full items-center justify-center gap-3 rounded-xl bg-indigo-600 px-6 py-4 text-base font-black text-white hover:bg-indigo-500 active:scale-[.98] transition-transform"
+          className="btn-primary flex w-full items-center justify-center gap-3 rounded-xl px-6 py-4 text-base font-black active:scale-[.98] transition-transform"
           onClick={() => exportOptimizedCv()}
           type="button"
         >

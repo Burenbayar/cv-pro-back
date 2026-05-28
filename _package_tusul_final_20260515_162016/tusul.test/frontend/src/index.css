@@ -185,6 +185,20 @@
   animation: slowViewEnter 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+@layer components {
+  .btn-primary {
+    @apply bg-brand-dark text-white transition-colors duration-200;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    @apply bg-brand-teal;
+  }
+
+  .btn-primary:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .slow-view-enter,
   .card-enter,

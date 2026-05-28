@@ -1,4 +1,6 @@
 import {type CvLanguage} from './cvSections.js';
+import {isTechCv, resolveDisplayRole} from './cvProfession.js';
+import {restoreMongolianWordSpacing} from './cvTextSpacing.js';
 
 const SKILL_TOKEN =
   /\b(javascript|typescript|react|next\.?js|node\.?js|sql|postgresql|python|java|html|css|figma|mongodb|docker|aws|git|express|graphql|tailwind)\b/gi;
@@ -16,7 +18,6 @@ export function isSkillHeavyAbout(text: string): boolean {
   return false;
 }
 
-/** CV-ийн PROFILE / зорилго / сонирхол агуулсан өгүүлбэрүүд */
 export function extractNarrativeFromCv(cvText: string): string[] {
   const lines = cvText
     .split('\n')
@@ -31,23 +32,23 @@ export function extractNarrativeFromCv(cvText: string): string[] {
       capture = true;
       continue;
     }
-    if (capture && /^[A-ZА-ЯӨҮЁ0-9][^.]{0,48}$/.test(line) && /\d{4}|mind academy|сэзис|university|bagsh|developer/i.test(line)) {
+    if (capture && /^[A-ZА-ЯӨҮЁ0-9][^.]{0,48}$/.test(line) && /\d{4}|сургууль|university|college/i.test(line)) {
       capture = false;
     }
     if (capture && line.length > 30 && !isSkillHeavyAbout(line)) {
-      chunks.push(line);
+      chunks.push(line.replace(/^•\s*/g, '').trim());
     }
   }
 
   for (const block of cvText.split(/\n{2,}/)) {
     const t = block.trim().replace(/\s+/g, ' ');
     if (t.length < 45 || t.length > 900) continue;
-    if (!INTEREST_RE.test(t) && !/программ|инженер|developer|student|оюутан|хөгжүүл/i.test(t)) continue;
     if (isSkillHeavyAbout(t)) continue;
+    if (!INTEREST_RE.test(t) && !/программ|инженер|developer|оюутан|хөгжүүл|нягтлан|бүртгэл|accountant|санхүү/i.test(t)) continue;
     if (!chunks.some((c) => c.includes(t.slice(0, 40)))) chunks.push(t);
   }
 
-  return chunks.slice(0, 4);
+  return chunks.slice(0, 3);
 }
 
 function stripSkillLists(text: string): string {
@@ -64,40 +65,75 @@ function polishSentences(text: string): string {
     .replace(/\s+/g, ' ')
     .replace(/\s+([,.])/g, '$1')
     .replace(/([а-яөүёa-z])\s*-\s*/gi, '$1 ')
+    .replace(/•\s*/g, ' ')
     .trim();
 }
 
+/** «Б. Солонго нь…» → «Миний бие…» */
+export function convertToFirstPersonMn(text: string, displayName: string): string {
+  let t = restoreMongolianWordSpacing(polishSentences(text));
+  const name = displayName.trim();
+  if (name) {
+    const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    t = t.replace(new RegExp(`${esc}\\s*ний?\\s*${esc}`, 'gi'), '');
+    t = t.replace(new RegExp(`${esc}\\s*ний?\\s*`, 'gi'), '');
+  }
+  t = t.replace(/^[А-ЯӨҮЁA-Z]\.\s*[А-ЯӨҮЁA-Z]+\s*ний?\s*/u, '');
+  t = t.replace(/^\S+(?:\s+\S+)?\s+нь\s+/i, '');
+  t = t.trim();
+  if (!/^миний\s*бие/i.test(t)) {
+    t = `Миний бие ${t.replace(/^нь\s+/i, '')}`.trim();
+  }
+  return t.replace(/^(миний\s*бие\s+){2,}/i, 'Миний бие ').trim();
+}
+
+function dedupeSentences(text: string): string {
+  const parts = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const p of parts) {
+    const key = p.slice(0, 50).toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(p);
+  }
+  return out.join(' ');
+}
+
 function buildMnHeuristic(opts: BuildAboutOpts): string {
-  const name = opts.displayName.trim();
-  const role = opts.targetRole.trim() || 'Software Engineer';
-  const level = opts.experienceLevel?.trim() || 'мэргэжлийн';
+  const role = resolveDisplayRole(opts.targetRole, opts.cvText, 'mn');
   const goals = opts.careerGoals?.trim();
 
-  const interests: string[] = [];
-  const raw = opts.cvText.toLowerCase();
-  if (/вэб|web/i.test(raw)) interests.push('вэб хөгжүүлэлт');
-  if (/хиймэл оюун|ai\b/i.test(raw)) interests.push('хиймэл оюунд суурилсан шийдэл');
-  if (/мобайл|mobile/i.test(raw)) interests.push('мобайл аппликейшн');
-  if (/backend|сервер/i.test(raw)) interests.push('backend систем');
-  const interestPhrase = interests.length ? interests.join(', ') : `${role} чиглэл`;
+  if (/нягтлан|бүртгэл|accountant|санхүү/i.test(opts.cvText)) {
+    const parts = [
+      `Миний бие ${role} мэргэжлээр ажилладаг. Санхүүгийн тайлан, данс бүртгэл, төлбөр тооцооны ажилд туршлагатай.`,
+      `Үнэнч шударга, хариуцлагатай, эмх цэгцтэй ажиллах зарчмыг баримталдаг.`,
+    ];
+    if (goals) parts.push(goals.endsWith('.') ? goals : `${goals}.`);
+    return polishSentences(dedupeSentences(parts.join(' ')));
+  }
+
+  if (isTechCv(opts.cvText)) {
+    const parts = [
+      `Миний бие ${role} чиглэлд ажилладаг. Бодит төсөл болон багийн ажилд оролцож, хэрэглэгчид үнэ цэн бүтээхэд чиглэсэн.`,
+    ];
+    if (goals) parts.push(goals.endsWith('.') ? goals : `${goals}.`);
+    return polishSentences(parts.join(' '));
+  }
 
   const parts = [
-    `${name} нь ${interestPhrase}-д сонирхолтой, ${level} түвшний мэргэжилтэн.`,
-    `Бодит төсөл болон багийн ажилд оролцож, хэрэглэгчид үнэ цэн бүтээх систем хөгжүүлэх чиглэлд туршлага хуримтлуулсан.`,
-    `${role} мэргэжлээр Монголын IT салбарт ур суурь тавих, шинэ технологийг суралцаж практикт нэвтрүүлэх зорилготой.`,
+    `Миний бие ${role} мэргэжлээр ажилладаг, мэргэжлийн ёс зүй, хариуцлага, харилцааны ур чадварт анхаардаг.`,
   ];
-
   if (goals) parts.push(goals.endsWith('.') ? goals : `${goals}.`);
   return polishSentences(parts.join(' '));
 }
 
 function buildEnHeuristic(opts: BuildAboutOpts): string {
   const name = opts.displayName.trim();
-  const role = opts.targetRole.trim() || 'Software Engineer';
+  const role = resolveDisplayRole(opts.targetRole, opts.cvText, 'en');
   const goals = opts.careerGoals?.trim();
   const parts = [
-    `${name} is a motivated ${role} focused on building practical digital products and growing through real project work.`,
-    `Interested in web development and applied technology solutions, with a clear goal of contributing measurable value to users and teams.`,
+    `${name} is a ${role} with a focus on professional responsibility, clear communication, and reliable delivery.`,
   ];
   if (goals) parts.push(goals.endsWith('.') ? goals : `${goals}.`);
   return polishSentences(parts.join(' '));
@@ -113,11 +149,15 @@ export type BuildAboutOpts = {
   existingAbout?: string;
 };
 
-/** Ур чадварын жагсаалтгүй мэргэжлийн товч танилцуулга / зорилго */
 export function buildProfessionalAbout(opts: BuildAboutOpts): string {
+  const finish = (text: string) => {
+    const out = opts.language === 'mn' ? convertToFirstPersonMn(text, opts.displayName) : polishSentences(text);
+    return dedupeSentences(out).slice(0, 520);
+  };
+
   const existing = polishSentences(stripSkillLists(opts.existingAbout || ''));
   if (existing.length > 50 && !isSkillHeavyAbout(existing)) {
-    return existing.slice(0, 520);
+    return finish(existing);
   }
 
   const narratives = extractNarrativeFromCv(opts.cvText)
@@ -126,9 +166,8 @@ export function buildProfessionalAbout(opts: BuildAboutOpts): string {
 
   if (narratives.length) {
     const merged = polishSentences(narratives.join(' '));
-    if (merged.length > 50) return merged.slice(0, 520);
+    if (merged.length > 50) return finish(merged);
   }
 
-  const generated = opts.language === 'mn' ? buildMnHeuristic(opts) : buildEnHeuristic(opts);
-  return generated.slice(0, 520);
+  return finish(opts.language === 'mn' ? buildMnHeuristic(opts) : buildEnHeuristic(opts));
 }

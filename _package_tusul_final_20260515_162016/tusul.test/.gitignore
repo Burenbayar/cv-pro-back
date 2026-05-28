@@ -1,5 +1,4 @@
 node_modules/
-dist/
 frontend/dist/
 build/
 coverage/
@@ -7,8 +6,10 @@ coverage/
 *.log
 
 .env*
+.env.local*
 !.env.example
 !backend/.env.example
+!frontend/.env.example
 
 backend/data/app-db.json
 backend/server-test*.log

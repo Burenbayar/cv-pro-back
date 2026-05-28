@@ -1,4 +1,6 @@
 import {buildProfessionalAbout} from './cvProfessionalSummary.js';
+import {partitionSkillsAndLanguages} from './cvSkillLanguage.js';
+import {repartitionEducationAndExperience, splitLineByEmbeddedHeaders} from './cvSectionSplit.js';
 
 export type CvLanguage = 'mn' | 'en';
 
@@ -7,6 +9,7 @@ export type ParsedCv = {
   education: string[];
   skills: string[];
   languages: string[];
+  hobbies: string[];
   about: string;
   experience: string[];
   references: string[];
@@ -16,6 +19,7 @@ const HEADER_KEYS: Array<{key: keyof ParsedCv; patterns: RegExp[]}> = [
   {key: 'contact', patterns: [/^холбоо\s*барих/i, /^contact/i, /^холбогдох/i]},
   {key: 'education', patterns: [/^боловсрол/i, /^education/i, /^сургалт/i]},
   {key: 'skills', patterns: [/^ур\s*чадвар/i, /^skills/i, /^чадвар$/i, /^гол\s*ур\s*чадвар/i, /^core\s*skills/i]},
+  {key: 'hobbies', patterns: [/^сонирхол/i, /^hobbies/i, /^interests/i, /^хобби/i]},
   {key: 'languages', patterns: [/^хэл(ний)?\s*мэдлэг/i, /^languages/i, /^хэл$/i]},
   {
     key: 'about',
@@ -35,7 +39,7 @@ const HEADER_KEYS: Array<{key: keyof ParsedCv; patterns: RegExp[]}> = [
 ];
 
 function emptyParsed(): ParsedCv {
-  return {contact: [], education: [], skills: [], languages: [], about: '', experience: [], references: []};
+  return {contact: [], education: [], skills: [], languages: [], hobbies: [], about: '', experience: [], references: []};
 }
 
 function matchHeader(line: string): keyof ParsedCv | null {
@@ -197,6 +201,7 @@ export function enrichParsedCv(
     education: [...parsed.education],
     skills: parsed.skills.length ? [...parsed.skills] : fallbackSkills.map((s) => s.replace(/^•\s*/, '')),
     languages: [...parsed.languages],
+    hobbies: [...parsed.hobbies],
     about: parsed.about,
     experience: [...parsed.experience],
     references: [...parsed.references],
@@ -221,6 +226,8 @@ export function enrichParsedCv(
   }
 
   if (!out.languages.length && fromRaw.languages.length) out.languages = fromRaw.languages;
+
+  if (!out.hobbies.length && fromRaw.hobbies.length) out.hobbies = fromRaw.hobbies;
 
   if (!out.about.trim()) {
     out.about = fromRaw.about.trim();
@@ -283,7 +290,11 @@ export function enrichParsedCv(
     existingAbout: out.about,
   });
 
-  return out;
+  const split = partitionSkillsAndLanguages(out.skills, out.languages);
+  out.skills = split.skills;
+  out.languages = split.languages;
+
+  return repartitionEducationAndExperience(out);
 }
 
 export function extractContact(cv: string) {
@@ -330,9 +341,29 @@ export function parseCvSections(text: string): ParsedCv {
       continue;
     }
 
-    if (current === 'about') aboutLines.push(line);
-    else if (current === 'experience') parsed.experience.push(line);
-    else parsed[current].push(line);
+    if (current === 'about') {
+      aboutLines.push(line);
+      continue;
+    }
+
+    const embedded = splitLineByEmbeddedHeaders(line);
+    if (embedded.length > 1 || embedded.some((c) => c.section)) {
+      for (const chunk of embedded) {
+        if (chunk.section) {
+          current = chunk.section === 'about' ? 'about' : chunk.section;
+          continue;
+        }
+        const text = chunk.text.trim();
+        if (!text) continue;
+        if (current === 'about') aboutLines.push(text);
+        else if (current === 'experience') parsed.experience.push(text);
+        else if (current) parsed[current].push(text);
+      }
+      continue;
+    }
+
+    if (current === 'experience') parsed.experience.push(line);
+    else if (current) parsed[current].push(line);
   }
 
   parsed.about = aboutLines.join(' ').trim();
@@ -363,7 +394,7 @@ export function parseCvSections(text: string): ParsedCv {
     }
   }
 
-  return parsed;
+  return repartitionEducationAndExperience(parsed);
 }
 
 function headerLine(lang: CvLanguage, key: keyof ParsedCv): string {

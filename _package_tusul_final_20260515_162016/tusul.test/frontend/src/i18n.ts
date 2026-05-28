@@ -130,6 +130,7 @@ const T = {
   aiRewriteTitle:  { mn: 'AI дахин бичих саналууд',  en: 'AI rewrite suggestions' },
   uploadFirstMsg:  { mn: 'Эхлээд CV оруулж шинжилгээ хийлгэнэ үү.', en: 'Upload and analyze a CV first.' },
   acceptedBtn:     { mn: 'Батлагдсан', en: 'Accepted' },
+  rejectedBtn:     { mn: 'Татгалзсан', en: 'Rejected' },
   acceptBtn:       { mn: 'Батлах',     en: 'Accept' },
   regenBtn:        { mn: 'Дахин',      en: 'Regen' },
   rejectBtn:       { mn: 'Татгалзах',  en: 'Reject' },
