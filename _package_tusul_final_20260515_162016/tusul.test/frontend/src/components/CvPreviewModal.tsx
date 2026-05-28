@@ -1,8 +1,9 @@
-import {useEffect} from 'react';
-import {X, ZoomIn} from 'lucide-react';
-import {CvTemplateDocument} from './CvTemplateDocument';
-import type {CvLanguage} from '@shared/cvSections';
-import {t} from '../i18n';
+import { useEffect } from 'react';
+import { X, ZoomIn } from 'lucide-react';
+import { CvScaledPreview } from './CvScaledPreview';
+import { CvTemplateDocument } from './CvTemplateDocument';
+import type { CvLanguage } from '@shared/cvSections';
+import { t } from '../i18n';
 
 type CvPreviewModalProps = {
   open: boolean;
@@ -17,7 +18,7 @@ type CvPreviewModalProps = {
   profileImage?: string;
 };
 
-export function CvPreviewModal({open, onClose, lang, analysis, profileImage}: CvPreviewModalProps) {
+export function CvPreviewModal({ open, onClose, lang, analysis, profileImage }: CvPreviewModalProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -42,7 +43,7 @@ export function CvPreviewModal({open, onClose, lang, analysis, profileImage}: Cv
       <div className="relative z-10 flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3">
           <p className="flex items-center gap-2 text-sm font-black text-slate-900">
-            <ZoomIn size={18} className="text-blue-600" /> 
+            <ZoomIn size={18} className="text-blue-600" />
             {title}
           </p>
           <button
@@ -55,7 +56,9 @@ export function CvPreviewModal({open, onClose, lang, analysis, profileImage}: Cv
           </button>
         </div>
         <div className="overflow-y-auto p-4 sm:p-6">
-          <CvTemplateDocument data={analysis} profileImage={profileImage} lang={lang} />
+          <CvScaledPreview>
+            <CvTemplateDocument data={analysis} profileImage={profileImage} lang={lang} />
+          </CvScaledPreview>
         </div>
       </div>
     </div>

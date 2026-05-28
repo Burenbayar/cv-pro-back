@@ -1,4 +1,5 @@
 import {enrichParsedCv, parseCvSections, type CvLanguage} from '@shared/cvSections';
+import {CvScaledPreview} from './CvScaledPreview';
 import {CvTemplateDocument, type CvTemplateData} from './CvTemplateDocument';
 import {t} from '../i18n';
 
@@ -38,7 +39,9 @@ export function ExportPdfPreview({analysis, profileImage, lang, size = 'sm', sho
         </p>
       ) : null}
       {hasContent ? (
-        <CvTemplateDocument data={analysis} profileImage={profileImage} lang={lang} compact={compact} />
+        <CvScaledPreview>
+          <CvTemplateDocument data={analysis} profileImage={profileImage} lang={lang} compact={compact} />
+        </CvScaledPreview>
       ) : (
         <p className={`text-amber-700 ${compact ? 'text-xs' : 'text-sm'}`}>{empty}</p>
       )}

@@ -53,9 +53,9 @@ export function CvTemplateDocument({ data, profileImage, lang, compact = false }
   const photoSize = compact ? 'size-14' : 'size-[72px]';
 
   return (
-    <div className="overflow-hidden rounded-sm border border-slate-300 bg-white font-sans shadow-sm">
+    <div className="min-w-[760px] overflow-hidden rounded-sm border border-slate-300 bg-white font-sans shadow-sm">
       <header
-        className="grid gap-3 overflow-hidden p-3 text-white sm:grid-cols-[auto_1fr_auto]"
+        className="grid grid-cols-[auto_1fr_auto] gap-3 overflow-hidden p-3 text-white"
         style={{ backgroundColor: CV_THEME.navy }}
       >
         <div
